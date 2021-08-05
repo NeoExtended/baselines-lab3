@@ -1,8 +1,11 @@
+import json
 import time
 from collections import deque
+from copy import deepcopy
 
 import yaml
 from stable_baselines3.common.callbacks import BaseCallback
+from stable_baselines3.common.logger import TensorBoardOutputFormat
 from stable_baselines3.common.vec_env.base_vec_env import VecEnv
 
 from baselines_lab3.utils import safe_mean, unwrap_vec_env
@@ -29,6 +32,7 @@ class TensorboardLogger(BaseCallback):
         self.first_step = True
         self.min_log_delay = min_log_delay
         self.config = config
+        self.tb_formatter = None
 
     def _on_training_start(self) -> None:
         self._initialize()
@@ -61,6 +65,12 @@ class TensorboardLogger(BaseCallback):
         else:
             self.n_episodes = [0]
 
+        output_formats = self.logger.output_formats
+        # Save reference to tensorboard formatter object
+        # note: the failure case (not formatter found) is not handled here, should be done with try/except.
+        self.tb_formatter = next(
+            formatter for formatter in output_formats if isinstance(formatter, TensorBoardOutputFormat))
+
     def _retrieve_values(self):
         """
         This method makes use of methods from the Monitor environment wrapper to retrieve episode information
@@ -92,12 +102,18 @@ class TensorboardLogger(BaseCallback):
             self.n_episodes[i] = len(ep_reward)
 
     def _write_config(self):
-        self.logger.add_hparams(self.config)
+        hparams = deepcopy(self.config)
+        for key in hparams:
+            if isinstance(hparams[key], dict):
+                hparams[key] = json.dumps(hparams[key])
+
+        self.tb_formatter.writer.add_hparams(hparams, {})
+        self.tb_formatter.writer.flush()
 
     def _write_summary(self):
         if len(self.ep_len_buffer) > 0:
-            self.logger.add_scalar('episode_length/ep_length_mean', safe_mean(self.ep_len_buffer), self.num_timesteps)
-            self.logger.add_scalar('reward/ep_reward_mean', safe_mean(self.reward_buffer), self.num_timesteps)
+            self.logger.record('episode_length/ep_length_mean', safe_mean(self.ep_len_buffer))
+            self.logger.record('reward/ep_reward_mean', safe_mean(self.reward_buffer))
 
         steps = self.num_timesteps - self.last_timesteps
         t_now = time.time()
@@ -106,4 +122,4 @@ class TensorboardLogger(BaseCallback):
         self.last_timesteps = self.num_timesteps
         self.fps_buffer.append(fps)
 
-        self.logger.add_scalar('steps_per_second', safe_mean(self.fps_buffer), self.num_timesteps)
+        self.logger.record('steps_per_second', safe_mean(self.fps_buffer))

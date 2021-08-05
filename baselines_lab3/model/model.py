@@ -38,10 +38,9 @@ def create_model(config: dict, env: gym.Env, seed: int) -> BaseAlgorithm:
     tlog_location = _get_tensorflow_log_location(tlog)
 
     # Create lr schedules if supported
-    if name in ["ppo2", "sac", "td3"]:
-        for key in ['learning_rate', "cliprange", "cliprange_vf"]:
-            if key in config and isinstance(config[key], dict):
-                config[key] = get_schedule(config[key].pop("type"), **config[key])
+    for key in ['learning_rate', "clip_range", "clip_range_vf"]:
+        if key in config and isinstance(config[key], dict):
+            config[key] = get_schedule(config[key].pop("type"), **config[key])
 
     if 'trained_agent' in config: # Continue training
         logging.info("Loading pretrained model from {}.".format(config['trained_agent']))

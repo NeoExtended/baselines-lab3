@@ -43,7 +43,6 @@ class CheckpointManager(BaseCallback):
         self.last_save = 0
         self.wrappers = []
         self.tb_log = tb_log
-        self.writer = None
 
         if config:
             env_desc = copy.deepcopy(config['env'])
@@ -65,9 +64,6 @@ class CheckpointManager(BaseCallback):
 
     def close(self):
         self.evaluator.close()
-    
-    def _on_training_start(self) -> None:
-        self.writer = self.locals['writer']
     
     def _on_step(self) -> bool:
         if self.num_timesteps >= self.last_save + self.save_interval:
@@ -114,6 +110,7 @@ class CheckpointManager(BaseCallback):
             return "{}_{}_{}.{}".format(prefix, checkpoint['counter'], checkpoint['time'], extension)
 
     def _save_best_model(self, model):
+        # TODO: This should be replaced by a separate callback.
         logging.debug("Evaluating model.")
         reward, steps = self.evaluator.evaluate(model)
         logging.debug("Evaluation result: Avg reward: {:.4f}, Avg Episode Length: {:.2f}".format(reward, steps))
