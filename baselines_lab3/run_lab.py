@@ -12,10 +12,6 @@ import logging
 from baselines_lab3.utils import config_util
 from baselines_lab3.experiment import Scheduler
 
-import tensorflow as tf
-tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
-tf.logging.set_verbosity(tf.logging.ERROR)
-
 
 def parse_args(args):
     parser = argparse.ArgumentParser("Run script for baselines lab.")

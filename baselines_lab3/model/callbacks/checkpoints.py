@@ -3,12 +3,10 @@ import logging
 import os
 from datetime import datetime
 
-import tensorflow as tf
-from stable_baselines.common.callbacks import BaseCallback
-from stable_baselines.common.vec_env import VecNormalize
+from stable_baselines3.common.callbacks import BaseCallback
+from stable_baselines3.common.vec_env import VecNormalize
 
 from baselines_lab3.env.evaluation import Evaluator
-from baselines_lab3.env.wrappers import CuriosityWrapper
 from baselines_lab3.utils import util
 
 
@@ -58,9 +56,6 @@ class CheckpointManager(BaseCallback):
                 if isinstance(normalization, dict):
                     normalization.pop('precompute', None)
                     normalization.pop('samples', None)
-
-            if curiosity:
-                self.wrappers.append(('curiosity', 'zip', util.unwrap_vec_env(env, CuriosityWrapper)))
 
             self.evaluator = Evaluator(config,
                                        env=env,
@@ -138,19 +133,8 @@ class CheckpointManager(BaseCallback):
         if not self.tb_log:
             return
 
-        length_summary = tf.Summary(value=[
-            tf.Summary.Value(
-                tag='episode_length/eval_ep_length_mean',
-                simple_value=steps)
-        ])
-        self.writer.add_summary(length_summary, self.num_timesteps)
-
-        reward_summary = tf.Summary(value=[
-            tf.Summary.Value(
-                tag='reward/eval_ep_reward_mean',
-                simple_value=reward)
-        ])
-        self.writer.add_summary(reward_summary, self.num_timesteps)
+        self.logger.record('episode_length/eval_ep_length_mean', steps)
+        self.logger.record('reward/eval_ep_reward_mean', reward)
 
     def _remove_checkpoint(self, checkpoint):
         model_path = self._make_path(checkpoint, "model", extension="zip")

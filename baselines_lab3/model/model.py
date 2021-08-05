@@ -2,30 +2,26 @@ import copy
 import logging
 
 import gym
-import tensorflow as tf
 
 # from stable_baselines import PPO2, A2C, ACER, ACKTR, DQN, HER, DDPG, TRPO, SAC, TD3
-from stable_baselines import PPO2, A2C, ACER, ACKTR, DQN, HER, SAC, TD3
-from stable_baselines.common.schedules import Scheduler
-from stable_baselines.common.base_class import BaseRLModel
+from stable_baselines3 import PPO, A2C, DQN, HER, SAC, TD3
+from stable_baselines3.common.base_class import BaseAlgorithm
 
 from baselines_lab3.model.schedules import get_schedule
 from baselines_lab3.utils import util
 
+
 ALGOS = {
     'a2c': A2C,
-    'acer': ACER,
-    'acktr': ACKTR,
     'dqn': DQN,
-#    'ddpg': DDPG, mpi dependency
     'her': HER,
     'sac': SAC,
-    'ppo2': PPO2,
-#    'trpo': TRPO, mpi dependency
+    'ppo': PPO,
     'td3': TD3
 }
 
-def create_model(config: dict, env: gym.Env, seed: int) -> BaseRLModel:
+
+def create_model(config: dict, env: gym.Env, seed: int) -> BaseAlgorithm:
     """
     Creates a stable-baselines model according to the given lab configuration.
     :param config: (dict) The current lab model configuration (from config['algorithm']).

@@ -4,11 +4,10 @@ import logging
 import os
 
 import gym
-from stable_baselines.bench import Monitor
-from stable_baselines.common.atari_wrappers import FrameStack, ScaledFloatFrame
-from stable_baselines.common.vec_env import VecFrameStack, SubprocVecEnv, VecNormalize, DummyVecEnv
+from stable_baselines3.common.monitor import Monitor
+from stable_baselines3.common.vec_env import VecFrameStack, SubprocVecEnv, VecNormalize, DummyVecEnv
 
-from baselines_lab3.env.wrappers import EvaluationWrapper, VecEvaluationWrapper, CuriosityWrapper, VecImageRecorder, VecScaledFloatFrame, VecStepSave
+from baselines_lab3.env.wrappers import EvaluationWrapper, VecEvaluationWrapper, VecImageRecorder, VecScaledFloatFrame, VecStepSave
 from baselines_lab3.env.wrappers.evaluation_wrappers import ParticleInformationWrapper
 
 
@@ -124,19 +123,6 @@ def _create_vectorized_env(env_id, env_kwargs, n_envs, multiprocessing, seed, lo
     if normalize and "dqn" not in algorithm_name:
         env = _add_normalization_wrapper(env, n_envs, normalize)
 
-    if curiosity:
-        if isinstance(curiosity, bool):
-            env = CuriosityWrapper(env)
-        else:
-            if 'trained_agent' in curiosity:
-                path = curiosity.pop('trained_agent')
-                env = CuriosityWrapper.load(path, env, **curiosity)
-                if len(env.int_rwd_rms.mean) != n_envs:
-                    logging.warning("Skipping loading of curiosity wrapper due to a mismatch in numbers of environments ({} vs {})".format(len(env.int_ret), n_envs))
-                    env = env.venv
-            else:
-                env = CuriosityWrapper(env, **curiosity)
-
     if scale:
         if isinstance(scale, dict):
             env = VecScaledFloatFrame(env, **scale)
@@ -181,9 +167,9 @@ def _create_standard_env(env_id, env_kwargs, seed, log_dir, wrappers, normalize,
     if normalize:
         logging.warning("Normalization is not supported for DDPG/DQN methods.")
     if scale:
-        env = ScaledFloatFrame(env)
+        logging.warning("Scaling is not supported for DDPG/DQN methods.")
     if frame_stack:
-        env = FrameStack(env, **frame_stack)
+        logging.warning("Frame-Stacking is not supported for DDPG/DQN methods.")
 
     return env
 

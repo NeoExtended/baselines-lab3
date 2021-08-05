@@ -1,7 +1,7 @@
 from copy import deepcopy
 
 from gym.utils.seeding import create_seed
-from stable_baselines.common.vec_env import VecNormalize
+from stable_baselines3.common.vec_env import VecNormalize
 
 from baselines_lab3.env import create_environment
 from baselines_lab3.env.wrappers import EvaluationWrapper, VecEvaluationWrapper

@@ -1,11 +1,10 @@
 import cv2
 import gym
 import numpy as np
-from stable_baselines.common.tile_images import tile_images
-from stable_baselines.common.vec_env import VecEnvWrapper
+from stable_baselines3.common.vec_env.base_vec_env import tile_images
+from stable_baselines3.common.vec_env import VecEnvWrapper
 
 from baselines_lab3.utils.recorder import GifRecorder, ImageSequenceRecorder
-from baselines_lab3.env.gym_maze.envs.maze_base import PARTICLE_MARKER
 
 
 class WarpGrayscaleFrame(gym.ObservationWrapper):
@@ -30,38 +29,6 @@ class WarpGrayscaleFrame(gym.ObservationWrapper):
         """
         frame = cv2.resize(frame, (self.width, self.height), interpolation=cv2.INTER_AREA)
         return frame[:, :, None]
-
-
-class InvisibleParticleNoiseWrapper(gym.ObservationWrapper):
-    """
-    Removes a random number of particles from the observation.
-    """
-    def __init__(self, env, probability=0.0001, max_particles = 20):
-        super(InvisibleParticleNoiseWrapper, self).__init__(env)
-        self.probability = probability
-        self.max_particles = max_particles
-
-    def observation(self, observation):
-        particles = np.where(observation == PARTICLE_MARKER)
-        random_particles = np.random.randint(0, self.max_particles)
-        choice = np.random.choice(len(particles[0]), min(len(particles[0]), random_particles), replace=False)
-        coords = np.asarray(particles)[:, choice]
-        observation[tuple(coords)] = 0
-        return observation
-
-
-class FakeParticleNoiseWrapper(gym.ObservationWrapper):
-    """
-    Adds a fake particle into the observation at random black pixels.
-    """
-    def __init__(self, env, probability=0.0001):
-        super(FakeParticleNoiseWrapper, self).__init__(env)
-        self.probability=probability
-
-    def observation(self, observation):
-        global_mask = self.np_random.choice([0, 1], self.observation_space.shape,
-                                            p=[1 - self.probability, self.probability])
-        return np.where(np.logical_and(global_mask, observation == 0), PARTICLE_MARKER, observation)
 
 
 class ObservationNoiseWrapper(gym.ObservationWrapper):

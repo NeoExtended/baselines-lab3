@@ -11,8 +11,6 @@ import numpy as np
 from baselines_lab3.utils.tensorboard.log_reader import TensorboardLogReader, interpolate, LogReader
 
 
-
-
 class Plotter:
     """
     Class for automated plot creation from tensorboard log files.

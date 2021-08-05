@@ -1,5 +1,5 @@
 import numpy as np
-from stable_baselines.common.vec_env import VecEnv
+from stable_baselines3.common.vec_env import VecEnv
 
 class Runner:
     """

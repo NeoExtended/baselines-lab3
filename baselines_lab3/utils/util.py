@@ -6,24 +6,14 @@ import os
 import time
 from datetime import datetime
 from subprocess import Popen, PIPE
+import logging
 
 import gym
 import numpy as np
-from stable_baselines.common import set_global_seeds
-from stable_baselines.common.vec_env import VecEnvWrapper
+from stable_baselines3.common.vec_env import VecEnvWrapper
 
 log_dir = None
 TIMESTAMP_FORMAT="%Y_%m_%d_%H%M%S"
-
-def set_random_seed(config):
-    """
-    Sets the random seed to python, numpy and tensorflow. The selected seed will be saved in the config['meta'] section.
-    :param config: The lab config file
-    """
-    random_seed = config['meta'].get('seed', time.time())
-    config['meta']['seed'] = random_seed
-
-    set_global_seeds(random_seed)
 
 
 def get_timestamp(pattern=TIMESTAMP_FORMAT):

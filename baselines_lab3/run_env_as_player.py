@@ -1,7 +1,7 @@
 import time
 
 import keyboard
-from stable_baselines.common import make_vec_env
+from stable_baselines3.common.env_util import make_vec_env
 
 from baselines_lab3.env.gym_maze.envs import MazeBase  # noqa # pylint: disable=unused-import
 

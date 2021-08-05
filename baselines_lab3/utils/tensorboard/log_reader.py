@@ -5,7 +5,11 @@ from typing import Tuple, List, Optional, Dict, Any
 
 import yaml
 import numpy as np
-import tensorflow as tf
+
+try:
+    import tensorflow as tf
+except ImportError:
+    logging.warning("Did not find tensorflow - reading logs will not be possible.")
 
 # logging.getLogger('matplotlib.font_manager').disabled = True
 

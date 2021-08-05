@@ -1,5 +1,6 @@
-from stable_baselines.common import make_vec_env
-from stable_baselines.common.vec_env import SubprocVecEnv
+from stable_baselines3 import DQN
+from stable_baselines3.common.env_util import make_vec_env
+from stable_baselines3.common.vec_env import SubprocVecEnv
 
 if __name__ == '__main__':
     env = make_vec_env("CartPole-v0", n_envs=1)

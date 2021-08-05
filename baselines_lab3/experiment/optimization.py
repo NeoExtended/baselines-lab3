@@ -6,8 +6,8 @@ import numpy as np
 import optuna
 from optuna.pruners import SuccessiveHalvingPruner, MedianPruner, NopPruner
 from optuna.samplers import RandomSampler, TPESampler
-from stable_baselines.common.callbacks import BaseCallback
-from stable_baselines.common.vec_env import VecEnv
+from stable_baselines3.common.callbacks import BaseCallback
+from stable_baselines3.common.vec_env import VecEnv
 
 from baselines_lab3.env import create_environment
 from baselines_lab3.env.evaluation import Evaluator

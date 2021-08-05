@@ -1,1 +1,0 @@
-from baselines_lab3.env.gym_maze.envs.maze_base import MazeBase

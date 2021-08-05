@@ -1,1 +1,0 @@
-from baselines_lab3.env.gym_maze.rewards.rewards import GENERATORS, ContinuousRewardGenerator, GoalRewardGenerator, GatheringRewardGenerator

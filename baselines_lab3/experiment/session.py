@@ -7,17 +7,8 @@ from pathlib import Path
 
 import numpy as np
 import matplotlib.pyplot as plt
-from stable_baselines.common.vec_env import VecVideoRecorder
+from stable_baselines3.common.vec_env import VecVideoRecorder
 import yaml
-
-# Load mpi4py-dependent algorithms only if mpi is installed.
-try:
-    import mpi4py
-except ImportError:
-    mpi4py = None
-
-if mpi4py is not None:
-    from stable_baselines.gail import ExpertDataset
 
 from baselines_lab3.env import create_environment
 from baselines_lab3.env.wrappers import EvaluationWrapper, VecEvaluationWrapper, VecImageRecorder
@@ -42,7 +33,6 @@ class Session(ABC):
     """
     def __init__(self, config, args):
         self.config = config
-        util.set_random_seed(self.config)
         self.log = None
         self.lab_mode = args.lab_mode
 
@@ -236,7 +226,6 @@ class TrainSession(Session):
             self._plot(self.log)
 
     def _run_experiment(self):
-        self._pretrain()
         callbacks = [self.saver, TensorboardLogger(config=self.config)]
         if self.config['meta'].get('record_images', False):
             callbacks.append(ObservationLogger())
@@ -248,16 +237,6 @@ class TrainSession(Session):
         self.saver.save(self.agent)
         self.env.close()
         self.saver.close()
-
-    def _pretrain(self):
-        if self.config['meta'].get('pretrain', None):
-            logging.info("Starting pretraining.")
-            pretrain_config = copy.deepcopy(self.config['meta']['pretrain'])
-            archive_location = pretrain_config.get('expert_path')
-            n_epochs = pretrain_config.pop('n_epochs', 1000)
-            assert os.path.exists(archive_location), "Could not find archive with pretraining data at {}".format(archive_location)
-            dataset = ExpertDataset(**pretrain_config)
-            self.agent.pretrain(dataset, n_epochs=n_epochs)
 
 
 class SearchSession(Session):

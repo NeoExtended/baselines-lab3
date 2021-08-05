@@ -4,10 +4,9 @@ from collections import deque
 
 import yaml
 import gym
-from stable_baselines.common.vec_env import VecEnvWrapper
+from stable_baselines3.common.vec_env import VecEnvWrapper
 
 from baselines_lab3.utils import safe_mean, get_timestamp, config_util
-from baselines_lab3.env.gym_maze.envs import MazeBase
 
 
 class ParticleInformationWrapper(gym.Wrapper):
@@ -22,7 +21,7 @@ class ParticleInformationWrapper(gym.Wrapper):
                 path = path + "." + ParticleInformationWrapper.EXT
 
         self.path = path
-        self.maze_env = env.unwrapped  # type: MazeBase
+        self.maze_env = env.unwrapped
         self.last_eval = -interval
         self.step_counter = 0
         self.eval_interval = interval
