@@ -11,14 +11,7 @@ from baselines_lab3.model.schedules import get_schedule
 from baselines_lab3.utils import util
 
 
-ALGOS = {
-    'a2c': A2C,
-    'dqn': DQN,
-    'her': HER,
-    'sac': SAC,
-    'ppo': PPO,
-    'td3': TD3
-}
+ALGOS = {"a2c": A2C, "dqn": DQN, "her": HER, "sac": SAC, "ppo": PPO, "td3": TD3}
 
 
 def create_model(config: dict, env: gym.Env, seed: int) -> BaseAlgorithm:
@@ -30,32 +23,35 @@ def create_model(config: dict, env: gym.Env, seed: int) -> BaseAlgorithm:
     :return: (BaseRLModel) A model which can be used to learn in the given environment.
     """
     config = copy.deepcopy(config)
-    name =  config.pop('name')
-    tlog = config.pop('tensorboard_log', None)
-    verbose = config.pop('verbose', 0)
-    policy_config = config.pop('policy')
+    name = config.pop("name")
+    tlog = config.pop("tensorboard_log", None)
+    verbose = config.pop("verbose", 0)
+    policy_config = config.pop("policy")
 
     tlog_location = _get_tensorflow_log_location(tlog)
 
     # Create lr schedules if supported
-    for key in ['learning_rate', "clip_range", "clip_range_vf"]:
+    for key in ["learning_rate", "clip_range", "clip_range_vf"]:
         if key in config and isinstance(config[key], dict):
             config[key] = get_schedule(config[key].pop("type"), **config[key])
 
-    if 'trained_agent' in config: # Continue training
-        logging.info("Loading pretrained model from {}.".format(config['trained_agent']))
+    if "trained_agent" in config:  # Continue training
+        logging.info(
+            "Loading pretrained model from {}.".format(config["trained_agent"])
+        )
 
         return ALGOS[name].load(
-            config['trained_agent'],
+            config["trained_agent"],
             seed=seed,
             env=env,
             tensorboard_log=tlog_location,
             verbose=verbose,
-            **config)
+            **config
+        )
 
     else:
         logging.info("Creating new model for {}.".format(name))
-        policy_name = policy_config.pop('name')
+        policy_name = policy_config.pop("name")
 
         return ALGOS[name](
             seed=seed,
@@ -64,7 +60,8 @@ def create_model(config: dict, env: gym.Env, seed: int) -> BaseAlgorithm:
             env=env,
             tensorboard_log=tlog_location,
             verbose=verbose,
-            **config)
+            **config
+        )
 
 
 def _get_tensorflow_log_location(tlog):
@@ -76,6 +73,6 @@ def _get_tensorflow_log_location(tlog):
         if isinstance(tlog, bool):
             return util.get_log_directory()
         else:
-            return tlog.get('path', util.get_log_directory())
+            return tlog.get("path", util.get_log_directory())
     else:
         return None

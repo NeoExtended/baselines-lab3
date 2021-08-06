@@ -13,7 +13,7 @@ import numpy as np
 from stable_baselines3.common.vec_env import VecEnvWrapper
 
 log_dir = None
-TIMESTAMP_FORMAT="%Y_%m_%d_%H%M%S"
+TIMESTAMP_FORMAT = "%Y_%m_%d_%H%M%S"
 
 
 def get_timestamp(pattern=TIMESTAMP_FORMAT):
@@ -110,7 +110,9 @@ def unwrap_vec_env(env, target_wrapper):
 
 
 def send_email(receiver, subject, content):
-    run_command_line_command('echo "{}" | mail -s "[baselines-lab] {}" {}'.format(content, subject, receiver))
+    run_command_line_command(
+        'echo "{}" | mail -s "[baselines-lab] {}" {}'.format(content, subject, receiver)
+    )
 
 
 def run_command_line_command(command):

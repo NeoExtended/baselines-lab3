@@ -32,7 +32,9 @@ class Recorder(ABC):
 class GifRecorder(Recorder):
     def _save_images(self):
         if len(self.images) > 0:
-            gif_path = os.path.join(self.path, "{}{}.gif".format(self.name_prefix, get_timestamp()))
+            gif_path = os.path.join(
+                self.path, "{}{}.gif".format(self.name_prefix, get_timestamp())
+            )
             logging.info("Saving gif to {}".format(gif_path))
             imageio.mimsave(gif_path, [np.array(img) for img in self.images], fps=30)
 
@@ -40,8 +42,12 @@ class GifRecorder(Recorder):
 class ImageSequenceRecorder(Recorder):
     def _save_images(self):
         if len(self.images) > 0:
-            image_path = os.path.join(self.path, "{}_{}".format(self.name_prefix, get_timestamp()))
+            image_path = os.path.join(
+                self.path, "{}_{}".format(self.name_prefix, get_timestamp())
+            )
             logging.info("Saving images to {}".format(image_path))
             os.makedirs(image_path, exist_ok=True)
             for i, image in enumerate(self.images):
-                imageio.imwrite(os.path.join(image_path, "{}.png".format(str(i))), image)
+                imageio.imwrite(
+                    os.path.join(image_path, "{}.png".format(str(i))), image
+                )

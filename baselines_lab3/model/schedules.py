@@ -1,4 +1,3 @@
-
 def get_schedule(type, **kwargs):
     if type == "linear":
         return LinearSchedule(**kwargs)
@@ -31,6 +30,7 @@ class LinearSchedule:
         Progress point at which the final value should be reached (1 - start, 0 - end)
 
     """
+
     def __init__(self, initial_value, final_value=0.0, final_point=0.0):
         self._initial_value = initial_value
         self._final_value = final_value
@@ -38,9 +38,13 @@ class LinearSchedule:
 
     def __call__(self, progress):
         # local progress: 1.0 = 100%
-        local_progress = max(0.0, (progress - self._final_point) / (1.0 - self._final_point))
+        local_progress = max(
+            0.0, (progress - self._final_point) / (1.0 - self._final_point)
+        )
         local_progress = 1.0 - local_progress
-        return self._initial_value + local_progress * (self._final_value - self._initial_value)
+        return self._initial_value + local_progress * (
+            self._final_value - self._initial_value
+        )
 
 
 class PiecewiseSchedule:
@@ -62,6 +66,7 @@ class PiecewiseSchedule:
         `endpoints` this value is returned. If None then AssertionError is
         raised when outside value is requested.
     """
+
     def __init__(self, endpoints, interpolation="linear", outside_value=None):
         idxes = [e[0] for e in endpoints]
         assert idxes == sorted(idxes)
@@ -69,13 +74,17 @@ class PiecewiseSchedule:
         if interpolation == "linear":
             self._interpolation = linear_interpolation
         else:
-            raise NotImplementedError("Only linear interpolation is available at the moment.")
+            raise NotImplementedError(
+                "Only linear interpolation is available at the moment."
+            )
 
         self._endpoints = endpoints
         self._outside_value = outside_value
 
     def __call__(self, progress):
-        for (left_t, left), (right_t, right) in zip(self._endpoints[:-1], self._endpoints[1:]):
+        for (left_t, left), (right_t, right) in zip(
+            self._endpoints[:-1], self._endpoints[1:]
+        ):
             if left_t <= progress < right_t:
                 alpha = float(progress - left_t) / (right_t - left_t)
                 return self._interpolation(left, right, alpha)

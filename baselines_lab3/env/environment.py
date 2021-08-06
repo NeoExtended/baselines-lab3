@@ -5,13 +5,26 @@ import os
 
 import gym
 from stable_baselines3.common.monitor import Monitor
-from stable_baselines3.common.vec_env import VecFrameStack, SubprocVecEnv, VecNormalize, DummyVecEnv
+from stable_baselines3.common.vec_env import (
+    VecFrameStack,
+    SubprocVecEnv,
+    VecNormalize,
+    DummyVecEnv,
+)
 
-from baselines_lab3.env.wrappers import EvaluationWrapper, VecEvaluationWrapper, VecImageRecorder, VecScaledFloatFrame, VecStepSave
+from baselines_lab3.env.wrappers import (
+    EvaluationWrapper,
+    VecEvaluationWrapper,
+    VecImageRecorder,
+    VecScaledFloatFrame,
+    VecStepSave,
+)
 from baselines_lab3.env.wrappers.evaluation_wrappers import ParticleInformationWrapper
 
 
-def make_env(env_id, env_kwargs, rank=0, seed=0, log_dir=None, wrappers=None, evaluation=False):
+def make_env(
+    env_id, env_kwargs, rank=0, seed=0, log_dir=None, wrappers=None, evaluation=False
+):
     """
     Helper function to multiprocess training and log the progress.
     :param env_id: (str) Name of the environment.
@@ -22,6 +35,7 @@ def make_env(env_id, env_kwargs, rank=0, seed=0, log_dir=None, wrappers=None, ev
         Will be used to wrap the env with.
     :return (function) a function to create environments, e.g. for use in SubprocVecEnv or DummyVecEnv
     """
+
     def _init():
         # set_global_seeds(seed + rank)
         env = gym.make(env_id, **env_kwargs)
@@ -36,7 +50,9 @@ def make_env(env_id, env_kwargs, rank=0, seed=0, log_dir=None, wrappers=None, ev
                 env = wrapper[0](env=env, **wrapper[1])
 
         if log_dir:
-            env = Monitor(env, filename=None, allow_early_resets=True)  # filename=os.path.join(log_dir, str(rank))
+            env = Monitor(
+                env, filename=None, allow_early_resets=True
+            )  # filename=os.path.join(log_dir, str(rank))
         return env
 
     return _init
@@ -70,27 +86,27 @@ def create_environment(config, seed, log_dir=None, video_path=None, evaluation=F
     :param evaluation: (bool) Weather or not to create an evaluation wrapper for the environment.
     :return: (gym.Env) New gym environment created according to the given configuration.
     """
-    alg_config = copy.deepcopy(config['algorithm'])
-    record_images = config['meta'].get('record_images', False)
-    config = copy.deepcopy(config['env'])
-    curiosity = config.pop('curiosity', False)
+    alg_config = copy.deepcopy(config["algorithm"])
+    record_images = config["meta"].get("record_images", False)
+    config = copy.deepcopy(config["env"])
+    curiosity = config.pop("curiosity", False)
     if isinstance(curiosity, dict):
-        if curiosity.pop('auto_params', False):
+        if curiosity.pop("auto_params", False):
             curiosity.update(_create_curiosity_parameters(config, alg_config))
 
-    env_id = config.pop('name')
-    n_envs = config.pop('n_envs', 1)
-    normalize = config.pop('normalize', None)
-    frame_stack = config.pop('frame_stack', None)
-    multiprocessing = config.pop('multiprocessing', True)
+    env_id = config.pop("name")
+    n_envs = config.pop("n_envs", 1)
+    normalize = config.pop("normalize", None)
+    frame_stack = config.pop("frame_stack", None)
+    multiprocessing = config.pop("multiprocessing", True)
 
-    scale = config.pop('scale', None)
-    logging.info("Creating environment with id {} and {} instances.".format(env_id, n_envs))
-
-
+    scale = config.pop("scale", None)
+    logging.info(
+        "Creating environment with id {} and {} instances.".format(env_id, n_envs)
+    )
 
     # Get tuples with (wrapper_class, wrapper_kwargs)
-    wrappers_config = config.pop('wrappers', [])
+    wrappers_config = config.pop("wrappers", [])
     wrappers = []
     for wrapper in wrappers_config:
         if isinstance(wrapper, dict):
@@ -101,17 +117,87 @@ def create_environment(config, seed, log_dir=None, video_path=None, evaluation=F
         else:
             raise ValueError("Got invalid wrapper with value {}".format(str(wrapper)))
 
-    return _create_vectorized_env(env_id, config, n_envs, multiprocessing, seed, log_dir, wrappers, normalize, frame_stack, video_path, evaluation, scale, curiosity, record_images, alg_config['name'])
+    return _create_vectorized_env(
+        env_id,
+        config,
+        n_envs,
+        multiprocessing,
+        seed,
+        log_dir,
+        wrappers,
+        normalize,
+        frame_stack,
+        video_path,
+        evaluation,
+        scale,
+        curiosity,
+        record_images,
+        alg_config["name"],
+    )
 
 
-def _create_vectorized_env(env_id, env_kwargs, n_envs, multiprocessing, seed, log_dir, wrappers, normalize, frame_stack, video_path, evaluation, scale, curiosity, buffer_step_data, algorithm_name):
+def _create_vectorized_env(
+    env_id,
+    env_kwargs,
+    n_envs,
+    multiprocessing,
+    seed,
+    log_dir,
+    wrappers,
+    normalize,
+    frame_stack,
+    video_path,
+    evaluation,
+    scale,
+    curiosity,
+    buffer_step_data,
+    algorithm_name,
+):
     if n_envs == 1:
-        env = DummyVecEnv([make_env(env_id, env_kwargs, 0, seed, log_dir, wrappers, evaluation=evaluation)])
+        env = DummyVecEnv(
+            [
+                make_env(
+                    env_id,
+                    env_kwargs,
+                    0,
+                    seed,
+                    log_dir,
+                    wrappers,
+                    evaluation=evaluation,
+                )
+            ]
+        )
     else:
         if multiprocessing:
-            env = SubprocVecEnv([make_env(env_id, env_kwargs, i, seed, log_dir, wrappers, evaluation=evaluation) for i in range(n_envs)])
+            env = SubprocVecEnv(
+                [
+                    make_env(
+                        env_id,
+                        env_kwargs,
+                        i,
+                        seed,
+                        log_dir,
+                        wrappers,
+                        evaluation=evaluation,
+                    )
+                    for i in range(n_envs)
+                ]
+            )
         else:
-            env = DummyVecEnv([make_env(env_id, env_kwargs, i, seed, log_dir, wrappers, evaluation=evaluation) for i in range(n_envs)])
+            env = DummyVecEnv(
+                [
+                    make_env(
+                        env_id,
+                        env_kwargs,
+                        i,
+                        seed,
+                        log_dir,
+                        wrappers,
+                        evaluation=evaluation,
+                    )
+                    for i in range(n_envs)
+                ]
+            )
 
     if video_path:
         env = VecImageRecorder(env, video_path, record_obs=True)
@@ -146,20 +232,32 @@ def _add_normalization_wrapper(env, n_envs, normalize):
     if isinstance(normalize, bool):
         env = VecNormalize(env)
     elif isinstance(normalize, dict):
-        if 'trained_agent' in normalize:
-            path = normalize.pop('trained_agent')
+        if "trained_agent" in normalize:
+            path = normalize.pop("trained_agent")
             env = VecNormalize.load(path, env)
-            env.training = normalize.pop('training', True)
-        elif normalize.pop('precompute', False):
-            samples = normalize.pop('samples', 10000)
+            env.training = normalize.pop("training", True)
+        elif normalize.pop("precompute", False):
+            samples = normalize.pop("samples", 10000)
             env = _precompute_normalization(env, n_envs, samples, normalize)
         else:
             env = VecNormalize(env, **normalize)
     return env
 
 
-def _create_standard_env(env_id, env_kwargs, seed, log_dir, wrappers, normalize, frame_stack, evaluation, scale):
-    env_maker = make_env(env_id, env_kwargs, 0, seed, log_dir, wrappers, evaluation=evaluation)
+def _create_standard_env(
+    env_id,
+    env_kwargs,
+    seed,
+    log_dir,
+    wrappers,
+    normalize,
+    frame_stack,
+    evaluation,
+    scale,
+):
+    env_maker = make_env(
+        env_id, env_kwargs, 0, seed, log_dir, wrappers, evaluation=evaluation
+    )
     env = env_maker()
 
     if evaluation:
@@ -185,15 +283,18 @@ def _precompute_normalization(env, num_envs, samples, config):
         obs, rewards, dones, info = env.step(actions)
 
         if i % log_step == 0:
-            logging.info("Progress: {}/{}".format(i*num_envs, samples))
+            logging.info("Progress: {}/{}".format(i * num_envs, samples))
 
     logging.info("Successfully precomputed normalization parameters.")
     env.reset()
     env.training = False
     return env
 
+
 def _create_curiosity_parameters(env_config, alg_config):
-    return {'gamma': alg_config.get('gamma', 0.99),
-            'learning_rate': alg_config.get('learning_rate', 0.0001),
-            'train_freq': env_config.get('n_envs', 1) * alg_config.get('n_steps', 64),
-            'buffer_size': env_config.get('n_envs', 1) * alg_config.get('n_steps', 64) * 4}
+    return {
+        "gamma": alg_config.get("gamma", 0.99),
+        "learning_rate": alg_config.get("learning_rate", 0.0001),
+        "train_freq": env_config.get("n_envs", 1) * alg_config.get("n_steps", 64),
+        "buffer_size": env_config.get("n_envs", 1) * alg_config.get("n_steps", 64) * 4,
+    }

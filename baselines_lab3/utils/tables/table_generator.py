@@ -13,12 +13,14 @@ from baselines_lab3.utils.tensorboard import TrainingInformation
 
 
 def human_format(num):
-    num = float('{:.3g}'.format(num))
+    num = float("{:.3g}".format(num))
     magnitude = 0
     while abs(num) >= 1000:
         magnitude += 1
         num /= 1000.0
-    return '{}{}'.format('{:f}'.format(num).rstrip('0').rstrip('.'), ['', 'k', 'M', 'G', 'T'][magnitude])
+    return "{}{}".format(
+        "{:f}".format(num).rstrip("0").rstrip("."), ["", "k", "M", "G", "T"][magnitude]
+    )
 
 
 class TableGenerator(ABC):
@@ -26,8 +28,21 @@ class TableGenerator(ABC):
     Used to create latex tables for the thesis. Not really a part of the rest of the lab.
     """
 
-    def __init__(self, files: List[Path], best: bool = True, avg: bool = True, drop: bool = True, run_id: bool = False, time: bool = False,
-                 std: bool = False, var: bool = False, cv_train: bool = False, cv_test: bool = False, rd_train: bool = False, rd_test: bool = False):
+    def __init__(
+        self,
+        files: List[Path],
+        best: bool = True,
+        avg: bool = True,
+        drop: bool = True,
+        run_id: bool = False,
+        time: bool = False,
+        std: bool = False,
+        var: bool = False,
+        cv_train: bool = False,
+        cv_test: bool = False,
+        rd_train: bool = False,
+        rd_test: bool = False,
+    ):
         self.files = files
         self.best = best
         self.avg = avg
@@ -42,7 +57,13 @@ class TableGenerator(ABC):
         self.rd_train = rd_train
         self.rd_test = rd_test
 
-    def make_table(self, output: str, drop_level: float = 0.05, max_step:Optional[int] = None, format: str = "tex"):
+    def make_table(
+        self,
+        output: str,
+        drop_level: float = 0.05,
+        max_step: Optional[int] = None,
+        format: str = "tex",
+    ):
         rows = []
         for file in self.files:
             config = config_util.read_config(str(file.joinpath("config.yml")))
@@ -55,7 +76,11 @@ class TableGenerator(ABC):
             if self.avg:
                 row["Avg"] = info.avg
             if self.drop:
-                if config["env"].get("reward_kwargs", {}).get("dynamic_episode_length", False):
+                if (
+                    config["env"]
+                    .get("reward_kwargs", {})
+                    .get("dynamic_episode_length", False)
+                ):
                     row["Drop"] = int(info.drop_test)
                 else:
                     row["Drop"] = int(info.drop_train)
@@ -79,23 +104,36 @@ class TableGenerator(ABC):
             rows.append(row)
 
         fieldnames = self._get_fieldnames()
-        table_format = ["c"]*len(fieldnames)
+        table_format = ["c"] * len(fieldnames)
         sort_len = len(fieldnames)
-        sort_start, fieldnames, table_format = self._extend_fieldnames(fieldnames, table_format)
+        sort_start, fieldnames, table_format = self._extend_fieldnames(
+            fieldnames, table_format
+        )
         table_format.insert(0, "r")  # Index
         self.value_start = sort_start + sort_len + 1
         dataframe = pd.DataFrame(rows, columns=fieldnames)
         if sort_len > 0:
-            dataframe.sort_values(fieldnames[sort_start:sort_start+sort_len], inplace=True, ascending=False, na_position="first")
+            dataframe.sort_values(
+                fieldnames[sort_start : sort_start + sort_len],
+                inplace=True,
+                ascending=False,
+                na_position="first",
+            )
             dataframe.reset_index(drop=True, inplace=True)
         if format == "tex":
 
-            self._format_frame(dataframe, fieldnames[sort_start+sort_len:], ["min"]*(len(fieldnames)-sort_start+sort_len))
+            self._format_frame(
+                dataframe,
+                fieldnames[sort_start + sort_len :],
+                ["min"] * (len(fieldnames) - sort_start + sort_len),
+            )
             self._to_latex(output, dataframe, table_format, fieldnames)
         elif format == "csv":
             dataframe.to_csv(output, index_label="Idx")
 
-    def _extend_fieldnames(self, fieldnames: List[str], table_format: List[str]) -> Tuple[int, List[str], List[str]]:
+    def _extend_fieldnames(
+        self, fieldnames: List[str], table_format: List[str]
+    ) -> Tuple[int, List[str], List[str]]:
         sort_start = 0
         if self.best:
             table_format.append("r")
@@ -144,9 +182,9 @@ class TableGenerator(ABC):
 
     def _get_header(self) -> Optional[List[Tuple[str, int, int]]]:
         if self.avg and self.best:
-            return [("Episode Length", self.value_start+1, self.value_start+2)]
+            return [("Episode Length", self.value_start + 1, self.value_start + 2)]
         elif self.avg or self.best:
-            return [("Episode Length", self.value_start+1, self.value_start+1)]
+            return [("Episode Length", self.value_start + 1, self.value_start + 1)]
         return []
 
     def _to_latex(self, output: str, frame: pd.DataFrame, table_format, fieldnames):
@@ -164,7 +202,7 @@ class TableGenerator(ABC):
 
         for i, row in frame.iterrows():
             values = ["" if pd.isna(x) else str(x) for x in row.values]
-            values.insert(0, str(i+1))
+            values.insert(0, str(i + 1))
             writer.add_row(values)
         writer.add_bottomrule()
         writer.end_tabular()
@@ -186,7 +224,9 @@ class TableGenerator(ABC):
         # Format numbers
         for col in value_cols:
             if col == "Time":
-                frame[col] = frame[col].apply(lambda x: str(timedelta(seconds=int(x))) + "h")
+                frame[col] = frame[col].apply(
+                    lambda x: str(timedelta(seconds=int(x))) + "h"
+                )
             elif col == "CV Train" or col == "CV Test":
                 frame[col] = frame[col].apply(lambda x: "{:.2%}".format(x))
             else:
@@ -229,8 +269,8 @@ class TableGenerator(ABC):
 
 class SimpleTableGenerator(TableGenerator):
     def __init__(self, **kwargs):
-        if 'run_id' in kwargs:
-            del kwargs['run_id']
+        if "run_id" in kwargs:
+            del kwargs["run_id"]
         super(SimpleTableGenerator, self).__init__(run_id=True, **kwargs)
 
     def _process_config(self, config: Dict[str, Any]) -> Dict[str, str]:
@@ -241,10 +281,12 @@ class SimpleTableGenerator(TableGenerator):
 
 
 class InstanceTableGenerator(TableGenerator):
-    Instances = {"Maze0122": "Brain",
-                 "Maze0318": "Corridor",
-                 "Maze0518": "Capillary",
-                 "VesselMaze02": "Vessel"}
+    Instances = {
+        "Maze0122": "Brain",
+        "Maze0318": "Corridor",
+        "Maze0518": "Capillary",
+        "VesselMaze02": "Vessel",
+    }
 
     def _process_config(self, config: Dict[str, Any]) -> Dict[str, str]:
         data = {}
@@ -264,17 +306,23 @@ class SingleObsErrorTableGenerator(TableGenerator):
         probability = 0
         frame_stack = ""
 
-        for wrapper in config['env']['wrappers']:
+        for wrapper in config["env"]["wrappers"]:
             if isinstance(wrapper, dict):
                 if "InvisibleParticleNoiseWrapper" in list(wrapper.keys())[0]:
                     obs_error_type = "False Negative"
-                    probability = wrapper["baselines_lab.env.wrappers.InvisibleParticleNoiseWrapper"].get("max_particles", 20)
+                    probability = wrapper[
+                        "baselines_lab.env.wrappers.InvisibleParticleNoiseWrapper"
+                    ].get("max_particles", 20)
                 elif "FakeParticleNoiseWrapper" in list(wrapper.keys())[0]:
                     obs_error_type = "False Positive"
-                    probability = wrapper["baselines_lab.env.wrappers.FakeParticleNoiseWrapper"].get("probability", 0.0001)
+                    probability = wrapper[
+                        "baselines_lab.env.wrappers.FakeParticleNoiseWrapper"
+                    ].get("probability", 0.0001)
                 elif "ObservationNoiseWrapper" in list(wrapper.keys())[0]:
                     obs_error_type = "Gaussian Noise"
-                    probability = wrapper["baselines_lab.env.wrappers.ObservationNoiseWrapper"].get("scale", 0.0001)
+                    probability = wrapper[
+                        "baselines_lab.env.wrappers.ObservationNoiseWrapper"
+                    ].get("scale", 0.0001)
             elif isinstance(wrapper, str):
                 if "InvisibleParticleNoiseWrapper" in wrapper:
                     obs_error_type = "False Negative"
@@ -288,7 +336,11 @@ class SingleObsErrorTableGenerator(TableGenerator):
         if config["env"].get("frame_stack", False):
             frame_stack = "X"
 
-        return {"Observation Noise": obs_error_type, "Strength": probability, "FS": frame_stack}
+        return {
+            "Observation Noise": obs_error_type,
+            "Strength": probability,
+            "FS": frame_stack,
+        }
 
     def _get_fieldnames(self) -> List[str]:
         return ["Observation Noise", "Strength", "FS"]
@@ -298,20 +350,26 @@ class SingleActionErrorTableGenerator(TableGenerator):
     def _process_config(self, config: Dict[str, Any]) -> Dict[str, str]:
         action_error_type = ""
         probability = 0
-        if "-v4" in config['env']['name']:
-            step_kw = config['env']['step_kwargs']
-            if step_kw['random_move_chance'] > 0.0:
+        if "-v4" in config["env"]["name"]:
+            step_kw = config["env"]["step_kwargs"]
+            if step_kw["random_move_chance"] > 0.0:
                 action_error_type = "Random Actions"
-                probability = step_kw['random_move_chance']
+                probability = step_kw["random_move_chance"]
             else:
                 action_error_type = "Noisy Actions"
-                probability = step_kw['fuzzy_action_probability']
+                probability = step_kw["fuzzy_action_probability"]
         else:
             found_wrapper = False
-            for wrapper in config['env']['wrappers']:
-                if isinstance(wrapper, dict) and "baselines_lab.env.wrappers.RepeatedActionWrapper" in list(wrapper.keys()):
+            for wrapper in config["env"]["wrappers"]:
+                if isinstance(
+                    wrapper, dict
+                ) and "baselines_lab.env.wrappers.RepeatedActionWrapper" in list(
+                    wrapper.keys()
+                ):
                     action_error_type = "Sticky Actions"
-                    probability = wrapper["baselines_lab.env.wrappers.RepeatedActionWrapper"].get('probability', 0.1)
+                    probability = wrapper[
+                        "baselines_lab.env.wrappers.RepeatedActionWrapper"
+                    ].get("probability", 0.1)
                     found_wrapper = True
                 elif isinstance(wrapper, str) and "RepeatedActionWrapper" in wrapper:
                     action_error_type = "Sticky Actions"
@@ -329,11 +387,11 @@ class SingleActionErrorTableGenerator(TableGenerator):
 
 class RLAlgorithmTableGenerator(TableGenerator):
     def _process_config(self, config: Dict[str, Any]) -> Dict[str, str]:
-        name = config['algorithm']['name']
-        return {'Algorithm': name.upper()}
+        name = config["algorithm"]["name"]
+        return {"Algorithm": name.upper()}
 
     def _get_fieldnames(self) -> List[str]:
-        return ['Algorithm']
+        return ["Algorithm"]
 
 
 class NetworkTableGenerator(TableGenerator):
@@ -342,34 +400,38 @@ class NetworkTableGenerator(TableGenerator):
         self.activations = activations
 
     def _process_config(self, config: Dict[str, Any]) -> Dict[str, str]:
-        policy_type = config['algorithm']['policy']['name']
+        policy_type = config["algorithm"]["policy"]["name"]
         data = {}
         if policy_type == "SimpleMazeCnnPolicy":
-            data['MLP'] = "[512]"
-            data['CNN'] = "default"
+            data["MLP"] = "[512]"
+            data["CNN"] = "default"
 
             if self.activations:
                 data["CNN Act"] = "Leaky ReLU"
                 data["MLP Act"] = "Leaky ReLU"
         elif policy_type == "GeneralCnnPolicy":
-            mlp = config['algorithm']['policy'].get("mlp_arch", [512])
-            data['MLP'] = str(mlp)
-            if config['algorithm']['policy'].get("extractor_arch"):
-                data['CNN'] = str(config['algorithm']['policy']['extractor_arch'])
+            mlp = config["algorithm"]["policy"].get("mlp_arch", [512])
+            data["MLP"] = str(mlp)
+            if config["algorithm"]["policy"].get("extractor_arch"):
+                data["CNN"] = str(config["algorithm"]["policy"]["extractor_arch"])
             else:
-                data['CNN'] = "default"
+                data["CNN"] = "default"
 
             if self.activations:
-                data["CNN Act"] = config['algorithm']['policy'].get("extractor_act", "Leaky ReLU")
-                data["MLP Act"] = config['algorithm']['policy'].get("mlp_act", "Leaky ReLU")
+                data["CNN Act"] = config["algorithm"]["policy"].get(
+                    "extractor_act", "Leaky ReLU"
+                )
+                data["MLP Act"] = config["algorithm"]["policy"].get(
+                    "mlp_act", "Leaky ReLU"
+                )
 
         return data
 
     def _get_fieldnames(self) -> List[str]:
         if self.activations:
-            return ['CNN', 'MLP', 'CNN Act', 'MLP Act']
+            return ["CNN", "MLP", "CNN Act", "MLP Act"]
         else:
-            return ['CNN', 'MLP']
+            return ["CNN", "MLP"]
 
 
 class ActivationsTableGenerator(NetworkTableGenerator):
@@ -380,65 +442,93 @@ class ActivationsTableGenerator(NetworkTableGenerator):
 class FrameStackingTableGenerator(TableGenerator):
     def _process_config(self, config: Dict[str, Any]) -> Dict[str, str]:
         data = {}
-        frame_stack = config['env']['frame_stack']
+        frame_stack = config["env"]["frame_stack"]
 
         if frame_stack:
-            data['Frame Stack'] = frame_stack.get('n_stack', 4)
+            data["Frame Stack"] = frame_stack.get("n_stack", 4)
         else:
-            data['Frame Stack'] = 1
+            data["Frame Stack"] = 1
 
         return data
 
     def _get_fieldnames(self) -> List[str]:
-        return ['Frame Stack']
+        return ["Frame Stack"]
 
 
 class ObservationSizeTableGenerator(TableGenerator):
     def _process_config(self, config: Dict[str, Any]) -> Dict[str, str]:
         data = {}
-        wrappers = config['env']['wrappers']
+        wrappers = config["env"]["wrappers"]
         found_wrapper = False
         for wrapper in wrappers:
             if isinstance(wrapper, dict):
-                if 'WarpGrayscaleFrame' in list(wrapper.keys())[0]:
-                    data['Frame Size'] = "({width}, {height})".format(**wrapper['env.wrappers.WarpGrayscaleFrame'])
+                if "WarpGrayscaleFrame" in list(wrapper.keys())[0]:
+                    data["Frame Size"] = "({width}, {height})".format(
+                        **wrapper["env.wrappers.WarpGrayscaleFrame"]
+                    )
                     found_wrapper = True
-                elif 'NoObsWrapper' in list(wrapper.keys())[0]:
-                    data['Frame Size'] = "-"
+                elif "NoObsWrapper" in list(wrapper.keys())[0]:
+                    data["Frame Size"] = "-"
                     found_wrapper = True
             else:
-                if 'WarpGrayscaleFrame' in wrapper:
-                    data['Frame Size'] = "(84, 84)"
+                if "WarpGrayscaleFrame" in wrapper:
+                    data["Frame Size"] = "(84, 84)"
                     found_wrapper = True
-                elif 'NoObsWrapper' in wrapper:
-                    data['Frame Size'] = "-"
+                elif "NoObsWrapper" in wrapper:
+                    data["Frame Size"] = "-"
                     found_wrapper = True
 
         if not found_wrapper:
-            if 'Maze0318' in config['env']['name']:
-                data['Frame Size'] = "(100, 100)"
-            elif 'VesselMaze02' in config['env']['name']:
-                data['Frame Size'] = "(130, 80)"
-            elif 'Maze0122' in config['env']['name']:
-                data['Frame Size'] = "(380, 300)"
+            if "Maze0318" in config["env"]["name"]:
+                data["Frame Size"] = "(100, 100)"
+            elif "VesselMaze02" in config["env"]["name"]:
+                data["Frame Size"] = "(130, 80)"
+            elif "Maze0122" in config["env"]["name"]:
+                data["Frame Size"] = "(380, 300)"
             else:
                 raise ValueError("Unknown env")
 
         return data
 
     def _get_fieldnames(self) -> List[str]:
-        return ['Frame Size']
+        return ["Frame Size"]
 
 
 class RewardTableGenerator(TableGenerator):
-    def __init__(self, files: List[Path], best: bool = True, avg: bool = True, drop: bool = True, run_id: bool = False, time: bool = False,
-                 std: bool = False, var: bool = False, cv_train: bool = False, cv_test: bool = False, rd_train: bool = False, rd_test: bool = False):
-        super(RewardTableGenerator, self).__init__(files, best, avg, drop, run_id, time, std, var, cv_train, cv_test, rd_train, rd_test)
+    def __init__(
+        self,
+        files: List[Path],
+        best: bool = True,
+        avg: bool = True,
+        drop: bool = True,
+        run_id: bool = False,
+        time: bool = False,
+        std: bool = False,
+        var: bool = False,
+        cv_train: bool = False,
+        cv_test: bool = False,
+        rd_train: bool = False,
+        rd_test: bool = False,
+    ):
+        super(RewardTableGenerator, self).__init__(
+            files,
+            best,
+            avg,
+            drop,
+            run_id,
+            time,
+            std,
+            var,
+            cv_train,
+            cv_test,
+            rd_train,
+            rd_test,
+        )
         self.mode = None
 
     def _get_header(self) -> Optional[List[Tuple[str, int, int]]]:
         stop = 6 if self.mode == "discrete" else 8
-        header = [("Reward Component", 2, stop+1)]
+        header = [("Reward Component", 2, stop + 1)]
         header.extend(super()._get_header())
 
         return header

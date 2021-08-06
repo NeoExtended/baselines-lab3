@@ -56,7 +56,7 @@ def resolve_imports(config):
     :return: (dict) Lab config with resolved import statements.
     """
     complete_config = {}
-    for c in config.get('import', []):
+    for c in config.get("import", []):
         complete_config = update_dict(complete_config, read_config(c))
 
     config = update_dict(complete_config, config)
@@ -86,9 +86,9 @@ def clean_config(config, args):
     :return: (dict) The cleaned config dictionary
     """
 
-    if args.lab_mode == 'enjoy':
+    if args.lab_mode == "enjoy":
         return _clean_enjoy_config(args, config)
-    elif args.lab_mode == 'train':
+    elif args.lab_mode == "train":
         _clean_train_config(args, config)
     elif args.lab_mode == "search":
         _clean_search_config(config)
@@ -97,72 +97,86 @@ def clean_config(config, args):
 
 
 def _clean_search_config(config):
-    resume = config['search'].get("resume", False)
+    resume = config["search"].get("resume", False)
     if resume and isinstance(resume, bool):
         from baselines_lab3.model.callbacks import CheckpointManager
-        path = CheckpointManager.get_latest_run(config['meta']['log_dir'])
-        config['search']['resume'] = path
+
+        path = CheckpointManager.get_latest_run(config["meta"]["log_dir"])
+        config["search"]["resume"] = path
     return config
 
 
 def _clean_train_config(args, config):
     # Allow fast loading of recently trained agents via "last" and "best" checkpoints
-    if config['algorithm'].get('trained_agent', None):
-        if config['algorithm']['trained_agent'] in ['best', 'last']:
+    if config["algorithm"].get("trained_agent", None):
+        if config["algorithm"]["trained_agent"] in ["best", "last"]:
             from baselines_lab3.model.callbacks import CheckpointManager
-            path = CheckpointManager.get_latest_run(config['meta']['log_dir'])
-            set_checkpoints(config, path, config['algorithm']['trained_agent'], args.trial)
-    if config['algorithm']['name'] in ["dqn", "ddpg"]:
-        if config['env'].get('n_envs', 1) > 1:
-            logging.warning("Number of envs must be 1 for dqn and ddpg! Reducing n_envs to 1.")
-            config['env']['n_envs'] = 1
+
+            path = CheckpointManager.get_latest_run(config["meta"]["log_dir"])
+            set_checkpoints(
+                config, path, config["algorithm"]["trained_agent"], args.trial
+            )
+    if config["algorithm"]["name"] in ["dqn", "ddpg"]:
+        if config["env"].get("n_envs", 1) > 1:
+            logging.warning(
+                "Number of envs must be 1 for dqn and ddpg! Reducing n_envs to 1."
+            )
+            config["env"]["n_envs"] = 1
     return config
 
 
 def _clean_enjoy_config(args, config):
     # Do not change running averages in enjoy mode
-    if 'normalize' in config['env'] and config['env']['normalize']:
-        if isinstance(config['env']['normalize'], bool):
-            config['env'].pop('normalize')
-            config['env']['normalize'] = {'training': False}
+    if "normalize" in config["env"] and config["env"]["normalize"]:
+        if isinstance(config["env"]["normalize"], bool):
+            config["env"].pop("normalize")
+            config["env"]["normalize"] = {"training": False}
         else:
-            config['env']['normalize']['training'] = False
+            config["env"]["normalize"]["training"] = False
     # Do not train curiosity networks in enjoy mode
-    if 'curiosity' in config['env'] and config['env']['curiosity']:
-        if isinstance(config['env']['curiosity'], bool):
-            config['env'].pop('curiosity')
-            config['env']['curiosity'] = {'training': False}
+    if "curiosity" in config["env"] and config["env"]["curiosity"]:
+        if isinstance(config["env"]["curiosity"], bool):
+            config["env"].pop("curiosity")
+            config["env"]["curiosity"] = {"training": False}
         else:
-            config['env']['curiosity']['training'] = False
+            config["env"]["curiosity"]["training"] = False
     # Find checkpoints
     if len(args.checkpoint_path) > 0:
-        config['meta']['session_dir'] = args.checkpoint_path
+        config["meta"]["session_dir"] = args.checkpoint_path
         set_checkpoints(config, args.checkpoint_path, args.type, args.trial)
     else:
         from baselines_lab3.model.callbacks import CheckpointManager
-        path = CheckpointManager.get_latest_run(config['meta']['log_dir'])
-        config['meta']['session_dir'] = path
+
+        path = CheckpointManager.get_latest_run(config["meta"]["log_dir"])
+        config["meta"]["session_dir"] = path
         set_checkpoints(config, path, args.type, args.trial)
     # Reduce number of envs if there are too many
-    if config['env']['n_envs'] > 32:
-        config['env']['n_envs'] = 32
+    if config["env"]["n_envs"] > 32:
+        config["env"]["n_envs"] = 32
     if args.strict:
-        config['env']['n_envs'] = 1
+        config["env"]["n_envs"] = 1
     return config
 
 
 def set_checkpoints(config, path, type, trial=-1):
     from baselines_lab3.model.callbacks import CheckpointManager
-    normalization = 'normalize' in config['env'] and config['env']['normalize']
-    curiosity = 'curiosity' in config['env'] and config['env']['curiosity']
+
+    normalization = "normalize" in config["env"] and config["env"]["normalize"]
+    curiosity = "curiosity" in config["env"] and config["env"]["curiosity"]
 
     checkpoint = CheckpointManager.get_checkpoint(path, type=type, trial=trial)
-    config['algorithm']['trained_agent'] = CheckpointManager.get_file_path(checkpoint, "model")
+    config["algorithm"]["trained_agent"] = CheckpointManager.get_file_path(
+        checkpoint, "model"
+    )
     if normalization:
-        config['env']['normalize']['trained_agent'] = CheckpointManager.get_file_path(checkpoint, "normalization", extension="pkl")
+        config["env"]["normalize"]["trained_agent"] = CheckpointManager.get_file_path(
+            checkpoint, "normalization", extension="pkl"
+        )
 
     if curiosity:
-        config['env']['curiosity']['trained_agent'] = CheckpointManager.get_file_path(checkpoint, "curiosity")
+        config["env"]["curiosity"]["trained_agent"] = CheckpointManager.get_file_path(
+            checkpoint, "curiosity"
+        )
 
 
 def read_config(config_file):
@@ -174,9 +188,9 @@ def read_config(config_file):
     file = open(config_file, "r")
     ext = os.path.splitext(config_file)[-1]
 
-    if ext == '.json':
+    if ext == ".json":
         config = json.load(file)
-    elif ext == '.yml':
+    elif ext == ".yml":
         config = yaml.load(file)
     else:
         raise NotImplementedError("File format unknown")
@@ -193,9 +207,9 @@ def save_config(config, path):
     """
     ext = os.path.splitext(path)[-1]
     file = open(path, "w")
-    if ext == '.json':
+    if ext == ".json":
         json.dump(config, file, indent=2, sort_keys=True)
-    elif ext == '.yml':
+    elif ext == ".yml":
         yaml.dump(config, file, indent=2)
     file.close()
 
@@ -208,7 +222,7 @@ def extend_meta_data(config):
     """
     extended_info = {
         "timestamp": util.get_timestamp(),
-        "seed": config['meta'].get("seed", seeding.create_seed(max_bytes=4)),
+        "seed": config["meta"].get("seed", seeding.create_seed(max_bytes=4)),
     }
-    config['meta'].update(extended_info)
+    config["meta"].update(extended_info)
     return config

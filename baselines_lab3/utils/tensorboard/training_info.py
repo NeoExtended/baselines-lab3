@@ -2,8 +2,12 @@ import logging
 from typing import List, Union
 
 import numpy as np
+
 # logging.getLogger('matplotlib.font_manager').disabled = True
-from baselines_lab3.utils.tensorboard.log_reader import TensorboardLogReader, interpolate
+from baselines_lab3.utils.tensorboard.log_reader import (
+    TensorboardLogReader,
+    interpolate,
+)
 
 
 class TrainingInformation(TensorboardLogReader):
@@ -12,6 +16,7 @@ class TrainingInformation(TensorboardLogReader):
     :param file_format: (str) File format for the created plots.
     :param log_dir: (str) Root directory for the tensorboard logs.
     """
+
     def __init__(self, log_dir: str) -> None:
         super(TrainingInformation, self).__init__([log_dir])
         self.log_dir = log_dir
@@ -32,8 +37,12 @@ class TrainingInformation(TensorboardLogReader):
         self.read_data(tags, max_step=max_step)
         tag_values = self.values[self.log_dir]
 
-        self.drop_train = self._get_drop(tag_values.get("episode_length/ep_length_mean"), drop_level=drop_level)
-        self.drop_test = self._get_drop(tag_values.get("episode_length/eval_ep_length_mean"), drop_level=drop_level)
+        self.drop_train = self._get_drop(
+            tag_values.get("episode_length/ep_length_mean"), drop_level=drop_level
+        )
+        self.drop_test = self._get_drop(
+            tag_values.get("episode_length/eval_ep_length_mean"), drop_level=drop_level
+        )
         step_data, value_data = tag_values.get("episode_length/eval_ep_length_mean")
         for steps, values in zip(step_data, value_data):
             if steps[-2] == steps[-1]:
@@ -53,18 +62,34 @@ class TrainingInformation(TensorboardLogReader):
         self.time_delta = np.average(self.deltas[self.log_dir])
         self.std = np.mean(np.std(value_data, axis=0))
         self.var = np.mean(np.var(value_data, axis=0))
-        #self.cv_test = np.mean(np.std(value_data, axis=0) / np.mean(value_data, axis=0))
+        # self.cv_test = np.mean(np.std(value_data, axis=0) / np.mean(value_data, axis=0))
         self.cv_test = np.std(value_data, axis=0)[-1] / np.mean(value_data, axis=0)[-1]
-        self.result_delta_test = np.max(value_data, axis=0)[-1] - np.min(value_data, axis=0)[-1]
+        self.result_delta_test = (
+            np.max(value_data, axis=0)[-1] - np.min(value_data, axis=0)[-1]
+        )
 
-        step_data_train, value_data_train = tag_values.get("episode_length/ep_length_mean")
-        step_data_train, value_data_train = np.asarray(step_data_train), np.asarray(value_data_train)
+        step_data_train, value_data_train = tag_values.get(
+            "episode_length/ep_length_mean"
+        )
+        step_data_train, value_data_train = (
+            np.asarray(step_data_train),
+            np.asarray(value_data_train),
+        )
         # Check if all rows in step data are equal. If not interpolate.
-        if step_data_train.dtype == np.object or not (step_data_train == step_data_train[0]).all():
-            step_data_train, value_data_train = interpolate(step_data_train, value_data_train)
-        #self.cv_train = np.mean(np.std(value_data_train, axis=0) / np.mean(value_data_train, axis=0))
-        self.cv_train = np.std(value_data_train, axis=0)[-1] / np.mean(value_data_train, axis=0)[-1]
-        self.result_delta_train = np.max(value_data_train, axis=0)[-1] - np.min(value_data_train, axis=0)[-1]
+        if (
+            step_data_train.dtype == np.object
+            or not (step_data_train == step_data_train[0]).all()
+        ):
+            step_data_train, value_data_train = interpolate(
+                step_data_train, value_data_train
+            )
+        # self.cv_train = np.mean(np.std(value_data_train, axis=0) / np.mean(value_data_train, axis=0))
+        self.cv_train = (
+            np.std(value_data_train, axis=0)[-1] / np.mean(value_data_train, axis=0)[-1]
+        )
+        self.result_delta_train = (
+            np.max(value_data_train, axis=0)[-1] - np.min(value_data_train, axis=0)[-1]
+        )
 
         logging.info(str(self.log_dir))
         logging.info("Drop Train: {}".format(self.drop_train))

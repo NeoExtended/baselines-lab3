@@ -23,8 +23,17 @@ class Evaluator:
     :param env: (gym.Env or VecEnv) Environment used in case of eval_mode=="fast". Must be wrapped in an evaluation wrapper.
     :param seed: (int) Seed for the evaluation environment. If None a random seed will be generated.
     """
-    def __init__(self, config=None, n_eval_episodes=32, deterministic=True, render=False, eval_method="normal",
-                 env=None, seed=None):
+
+    def __init__(
+        self,
+        config=None,
+        n_eval_episodes=32,
+        deterministic=True,
+        render=False,
+        eval_method="normal",
+        env=None,
+        seed=None,
+    ):
         self.eval_method = eval_method
         self.config = config
         self.n_eval_episodes = n_eval_episodes
@@ -32,32 +41,40 @@ class Evaluator:
         self.render = render
 
         if eval_method in ["normal", "slow"]:
-            assert config, "You must provide an environment configuration, if the eval_method is not fast!"
+            assert (
+                config
+            ), "You must provide an environment configuration, if the eval_method is not fast!"
             test_config = deepcopy(config)
-            test_env_config = test_config['env']
+            test_env_config = test_config["env"]
             if eval_method == "slow":
-                test_env_config['n_envs'] = 1
+                test_env_config["n_envs"] = 1
 
-            if not test_env_config.get('n_envs', None) and not eval_method == "slow":
-                test_env_config['n_envs'] = 8
+            if not test_env_config.get("n_envs", None) and not eval_method == "slow":
+                test_env_config["n_envs"] = 8
 
             if not seed:
                 seed = create_seed()
-            if test_env_config['n_envs'] > 32:
-                test_env_config['n_envs'] = 32
-            test_env_config['curiosity'] = False # TODO: Sync train and test curiosity wrappers and reenable
+            if test_env_config["n_envs"] > 32:
+                test_env_config["n_envs"] = 32
+            test_env_config[
+                "curiosity"
+            ] = False  # TODO: Sync train and test curiosity wrappers and reenable
 
             # Disable dynamic episode length on evaluation to get comparable test results independent of rewards.
             if test_env_config.get("reward_kwargs", None):
-                if test_env_config["reward_kwargs"].get("dynamic_episode_length", False):
+                if test_env_config["reward_kwargs"].get(
+                    "dynamic_episode_length", False
+                ):
                     test_env_config["reward_kwargs"]["dynamic_episode_length"] = False
 
-            self.test_env = create_environment(test_config,
-                                               seed,
-                                               evaluation=True)
-            self.eval_wrapper = unwrap_env(self.test_env, VecEvaluationWrapper, EvaluationWrapper)
+            self.test_env = create_environment(test_config, seed, evaluation=True)
+            self.eval_wrapper = unwrap_env(
+                self.test_env, VecEvaluationWrapper, EvaluationWrapper
+            )
         elif eval_method == "fast":
-            assert env, "You must provide an environment with an EvaluationWrapper if the eval_method is fast!"
+            assert (
+                env
+            ), "You must provide an environment with an EvaluationWrapper if the eval_method is fast!"
             self.test_env = None
             self.eval_wrapper = unwrap_env(env, VecEvaluationWrapper, EvaluationWrapper)
         else:
@@ -77,12 +94,17 @@ class Evaluator:
             self.test_env.close()
 
     def _evaluate_fast(self):
-        return self.eval_wrapper.aggregator.reward_rms, self.eval_wrapper.aggregator.step_rms
+        return (
+            self.eval_wrapper.aggregator.reward_rms,
+            self.eval_wrapper.aggregator.step_rms,
+        )
 
     def _evaluate_normal(self, model):
         self.eval_wrapper.reset_statistics()
 
-        if self.config.get('normalize', None): # Update normalization running means if necessary
+        if self.config.get(
+            "normalize", None
+        ):  # Update normalization running means if necessary
             norm = unwrap_vec_env(self.test_env, VecNormalize)
             model_norm = unwrap_vec_env(model.env, VecNormalize)
             norm.obs_rms = model_norm.obs_rms
@@ -90,6 +112,16 @@ class Evaluator:
             norm.training = False
 
         from baselines_lab3.experiment import Runner
-        runner = Runner(self.test_env, model, render=self.render, deterministic=self.deterministic, close_env=False)
+
+        runner = Runner(
+            self.test_env,
+            model,
+            render=self.render,
+            deterministic=self.deterministic,
+            close_env=False,
+        )
         runner.run(self.n_eval_episodes)
-        return self.eval_wrapper.aggregator.mean_reward, self.eval_wrapper.aggregator.mean_steps
+        return (
+            self.eval_wrapper.aggregator.mean_reward,
+            self.eval_wrapper.aggregator.mean_steps,
+        )

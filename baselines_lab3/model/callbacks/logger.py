@@ -107,7 +107,7 @@ class TensorboardLogger(BaseCallback):
             if isinstance(hparams[key], dict):
                 hparams[key] = json.dumps(hparams[key])
 
-        self.tb_formatter.writer.add_hparams(hparams, {})
+        self.tb_formatter.writer.add_hparams(hparams, {"test": 0.0})
         self.tb_formatter.writer.flush()
 
     def _write_summary(self):

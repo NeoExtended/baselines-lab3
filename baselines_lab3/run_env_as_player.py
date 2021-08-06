@@ -3,8 +3,6 @@ import time
 import keyboard
 from stable_baselines3.common.env_util import make_vec_env
 
-from baselines_lab3.env.gym_maze.envs import MazeBase  # noqa # pylint: disable=unused-import
-
 env = make_vec_env("Maze0318Continuous-v0", n_envs=1)
 obs = env.reset()
 
@@ -31,4 +29,4 @@ for i in range(1000):
         action = 0
 
     obs, rewards, dones, info = env.step([action])
-    #print(rewards)
+    # print(rewards)

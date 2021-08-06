@@ -8,7 +8,13 @@ import numpy as np
 
 
 class ObservationLogger(BaseCallback):
-    def __init__(self, render_all: bool = False, random_render: bool = True, random_render_interval: int = 25000, verbose: int = 0):
+    def __init__(
+        self,
+        render_all: bool = False,
+        random_render: bool = True,
+        random_render_interval: int = 25000,
+        verbose: int = 0,
+    ):
         super().__init__(verbose)
         self.step_save = None  # type: Optional[VecStepSave]
         self.writer = None
@@ -22,7 +28,9 @@ class ObservationLogger(BaseCallback):
     def _on_training_start(self) -> None:
         self.step_save = unwrap_vec_env(self.training_env, VecStepSave)
         if not isinstance(self.step_save, VecStepSave):
-            raise ValueError("The observation logger requires the env to be wrapped with a step save wrapper!")
+            raise ValueError(
+                "The observation logger requires the env to be wrapped with a step save wrapper!"
+            )
 
     def _on_step(self) -> bool:
         if self.render_all:
@@ -39,13 +47,21 @@ class ObservationLogger(BaseCallback):
         return True
 
     def _render_obs(self, env_id):
-        self.logger.add_image('obs', self.step_save.last_infos[env_id]['terminal_observation'], self.num_timesteps)
+        self.logger.add_image(
+            "obs",
+            self.step_save.last_infos[env_id]["terminal_observation"],
+            self.num_timesteps,
+        )
 
     def _random_render(self):
         if self.num_timesteps >= self.next_render:
-            img = self.training_env.render('rgb_array')
-            self.logger.add_image('render_result', img, self.num_timesteps)
+            img = self.training_env.render("rgb_array")
+            self.logger.add_image("render_result", img, self.num_timesteps)
 
             next_interval = np.random.randint(1, self.random_render_interval)
-            self.next_render = self.num_timesteps + (self.random_render_interval - self.last_interval) + next_interval
+            self.next_render = (
+                self.num_timesteps
+                + (self.random_render_interval - self.last_interval)
+                + next_interval
+            )
             self.last_interval = next_interval

@@ -4,7 +4,7 @@ from typing import List, Tuple
 class LatexTableWriter:
     def __init__(self, indent=4):
         self.lines = []
-        self.indent = " "*indent
+        self.indent = " " * indent
         self.current_indent = 0
         self.table_width = 0
 
@@ -45,9 +45,13 @@ class LatexTableWriter:
         cmidrule_line = ""
         position = 0
         for i, (title, start, stop) in enumerate(header):
-            header_line += " & "*(start - position - 1)
-            header_line += "\\multicolumn{{{length}}}{{c}}{{{title}}}".format(length=(stop-start+1), title=title)
-            cmidrule_line += "\\cmidrule(lr){{{start}-{end}}}".format(start=start, end=stop)
+            header_line += " & " * (start - position - 1)
+            header_line += "\\multicolumn{{{length}}}{{c}}{{{title}}}".format(
+                length=(stop - start + 1), title=title
+            )
+            cmidrule_line += "\\cmidrule(lr){{{start}-{end}}}".format(
+                start=start, end=stop
+            )
             position = stop + 1
             if i < len(header):
                 header_line += " & "
@@ -68,7 +72,7 @@ class LatexTableWriter:
     def _line(self, content):
         if "\\end" in content:
             self.current_indent -= 1
-        self.lines.append(self.indent*self.current_indent + content + "\n")
+        self.lines.append(self.indent * self.current_indent + content + "\n")
         if "\\begin" in content:
             self.current_indent += 1
 
