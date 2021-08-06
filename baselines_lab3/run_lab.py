@@ -2,9 +2,6 @@ import os
 import sys
 
 # Allow absolute imports even if project is not installed
-import torch
-import yappi
-
 sys.path.insert(0, os.path.dirname(os.getcwd()))
 
 import argparse
@@ -136,15 +133,8 @@ def main(args=None):
     logging.getLogger().setLevel(args.verbose)
     configs = config_util.parse_config_args(args.config_file, args)
 
-    # yappi.set_clock_type("cpu")
-    # yappi.start()
-    # torch.set_num_threads(2)
-
     s = Scheduler(configs, args)
     s.run()
-    #
-    # yappi.get_func_stats().print_all()
-    # yappi.get_thread_stats().print_all()
 
 
 if __name__ == "__main__":
