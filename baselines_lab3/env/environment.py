@@ -89,10 +89,6 @@ def create_environment(config, seed, log_dir=None, video_path=None, evaluation=F
     alg_config = copy.deepcopy(config["algorithm"])
     record_images = config["meta"].get("record_images", False)
     config = copy.deepcopy(config["env"])
-    curiosity = config.pop("curiosity", False)
-    if isinstance(curiosity, dict):
-        if curiosity.pop("auto_params", False):
-            curiosity.update(_create_curiosity_parameters(config, alg_config))
 
     env_id = config.pop("name")
     n_envs = config.pop("n_envs", 1)
@@ -130,7 +126,6 @@ def create_environment(config, seed, log_dir=None, video_path=None, evaluation=F
         video_path,
         evaluation,
         scale,
-        curiosity,
         record_images,
         alg_config["name"],
     )
@@ -149,55 +144,17 @@ def _create_vectorized_env(
     video_path,
     evaluation,
     scale,
-    curiosity,
     buffer_step_data,
     algorithm_name,
 ):
-    if n_envs == 1:
-        env = DummyVecEnv(
-            [
-                make_env(
-                    env_id,
-                    env_kwargs,
-                    0,
-                    seed,
-                    log_dir,
-                    wrappers,
-                    evaluation=evaluation,
-                )
-            ]
-        )
+    env_creation_fns = [
+        make_env(env_id, env_kwargs, i, seed, log_dir, wrappers, evaluation=evaluation,)
+        for i in range(n_envs)
+    ]
+    if multiprocessing:
+        env = SubprocVecEnv(env_creation_fns)
     else:
-        if multiprocessing:
-            env = SubprocVecEnv(
-                [
-                    make_env(
-                        env_id,
-                        env_kwargs,
-                        i,
-                        seed,
-                        log_dir,
-                        wrappers,
-                        evaluation=evaluation,
-                    )
-                    for i in range(n_envs)
-                ]
-            )
-        else:
-            env = DummyVecEnv(
-                [
-                    make_env(
-                        env_id,
-                        env_kwargs,
-                        i,
-                        seed,
-                        log_dir,
-                        wrappers,
-                        evaluation=evaluation,
-                    )
-                    for i in range(n_envs)
-                ]
-            )
+        env = DummyVecEnv(env_creation_fns)
 
     if video_path:
         env = VecImageRecorder(env, video_path, record_obs=True)
@@ -289,12 +246,3 @@ def _precompute_normalization(env, num_envs, samples, config):
     env.reset()
     env.training = False
     return env
-
-
-def _create_curiosity_parameters(env_config, alg_config):
-    return {
-        "gamma": alg_config.get("gamma", 0.99),
-        "learning_rate": alg_config.get("learning_rate", 0.0001),
-        "train_freq": env_config.get("n_envs", 1) * alg_config.get("n_steps", 64),
-        "buffer_size": env_config.get("n_envs", 1) * alg_config.get("n_steps", 64) * 4,
-    }

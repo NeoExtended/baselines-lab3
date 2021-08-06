@@ -56,9 +56,6 @@ class Evaluator:
                 seed = create_seed()
             if test_env_config["n_envs"] > 32:
                 test_env_config["n_envs"] = 32
-            test_env_config[
-                "curiosity"
-            ] = False  # TODO: Sync train and test curiosity wrappers and reenable
 
             # Disable dynamic episode length on evaluation to get comparable test results independent of rewards.
             if test_env_config.get("reward_kwargs", None):

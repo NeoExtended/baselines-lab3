@@ -9,9 +9,9 @@ algorithm:
   gamma: 0.9999
   gae_lambda: 0.95
   learning_rate: 0.001
-  n_steps: 512
-  batch_size: 8
-  n_epochs: 20
+  n_steps: 2048
+  batch_size: 1024
+  n_epochs: 15
 
 env:
   name: "gym_maze:Maze0318Continuous-v0"
@@ -19,13 +19,12 @@ env:
     - env.wrappers.WarpGrayscaleFrame
     - stable_baselines3.common.atari_wrappers.MaxAndSkipEnv:
         skip: 4
-  n_envs: 16
+  n_envs: 32
   frame_stack:
     n_stack: 4
   n_particles: 256
   reward_kwargs:
     gathering_reward: 0.0
-  curiosity: false
 
 meta:
   seed: 82

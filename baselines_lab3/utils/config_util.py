@@ -133,13 +133,6 @@ def _clean_enjoy_config(args, config):
             config["env"]["normalize"] = {"training": False}
         else:
             config["env"]["normalize"]["training"] = False
-    # Do not train curiosity networks in enjoy mode
-    if "curiosity" in config["env"] and config["env"]["curiosity"]:
-        if isinstance(config["env"]["curiosity"], bool):
-            config["env"].pop("curiosity")
-            config["env"]["curiosity"] = {"training": False}
-        else:
-            config["env"]["curiosity"]["training"] = False
     # Find checkpoints
     if len(args.checkpoint_path) > 0:
         config["meta"]["session_dir"] = args.checkpoint_path
@@ -162,7 +155,6 @@ def set_checkpoints(config, path, type, trial=-1):
     from baselines_lab3.model.callbacks import CheckpointManager
 
     normalization = "normalize" in config["env"] and config["env"]["normalize"]
-    curiosity = "curiosity" in config["env"] and config["env"]["curiosity"]
 
     checkpoint = CheckpointManager.get_checkpoint(path, type=type, trial=trial)
     config["algorithm"]["trained_agent"] = CheckpointManager.get_file_path(
@@ -171,11 +163,6 @@ def set_checkpoints(config, path, type, trial=-1):
     if normalization:
         config["env"]["normalize"]["trained_agent"] = CheckpointManager.get_file_path(
             checkpoint, "normalization", extension="pkl"
-        )
-
-    if curiosity:
-        config["env"]["curiosity"]["trained_agent"] = CheckpointManager.get_file_path(
-            checkpoint, "curiosity"
         )
 
 

@@ -29,8 +29,6 @@ from baselines_lab3.utils.tensorboard import (
 )
 
 PLOT_TAGS = [
-    "curiosity/ep_ext_reward_mean",
-    "curiosity/ep_int_reward_mean",
     "episode_length/ep_length_mean",
     "episode_length/eval_ep_length_mean",
     "episode_reward",
@@ -264,25 +262,24 @@ class TrainSession(Session):
         n_trials = self.config["meta"].get("n_trials", 1)
 
         if n_trials == 1:
-            self._setup_session()
-            self._run_experiment()
-            del self.env
-            del self.agent
-            del self.saver
+            self._run_trial()
         else:
             for i in range(n_trials):
                 trial_dir = os.path.join(self.log, "trial_{}".format(i))
                 os.mkdir(trial_dir)
                 util.set_log_directory(trial_dir)
 
-                self._setup_session()
-                self._run_experiment()
-                del self.env
-                del self.agent
-                del self.saver
+                self._run_trial()
 
         if self.config["meta"].get("plot", False):
             self._plot(self.log)
+
+    def _run_trial(self):
+        self._setup_session()
+        self._run_experiment()
+        del self.env
+        del self.agent
+        del self.saver
 
     def _run_experiment(self):
         callbacks = [self.saver, TensorboardLogger(config=self.config)]
