@@ -1,0 +1,34 @@
+algorithm:
+  name: "ppo"
+  verbose: 10
+  policy:
+    name: CnnPolicy
+  tensorboard_log: true
+  clip_range: 0.1
+  ent_coef: 0.0014
+  gamma: 0.9999
+  gae_lambda: 0.95
+  learning_rate: 0.001
+  n_steps: 512
+  batch_size: 8
+  n_epochs: 20
+
+env:
+  name: "gym_maze:Maze0318Continuous-v0"
+  wrappers:
+    - env.wrappers.WarpGrayscaleFrame
+    - stable_baselines3.common.atari_wrappers.MaxAndSkipEnv:
+        skip: 4
+  n_envs: 16
+  frame_stack:
+    n_stack: 4
+  n_particles: 256
+  reward_kwargs:
+    gathering_reward: 0.0
+  curiosity: false
+
+meta:
+  seed: 82
+  n_timesteps: 3000000
+  log_dir: "./logs/Labtest"
+  save_interval: 200000

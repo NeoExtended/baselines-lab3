@@ -3,7 +3,7 @@ import time
 import keyboard
 from stable_baselines3.common.env_util import make_vec_env
 
-env = make_vec_env("Maze0318Continuous-v0", n_envs=1)
+env = make_vec_env("gym_maze:Maze0318Continuous-v0", n_envs=1)
 obs = env.reset()
 
 for i in range(1000):
