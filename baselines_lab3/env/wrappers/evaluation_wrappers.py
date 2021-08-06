@@ -41,17 +41,27 @@ class ParticleInformationWrapper(gym.Wrapper):
         if self.step_counter - self.last_eval >= self.eval_interval:
             self.last_eval = self.step_counter
             self.eval_times.append(self.step_counter)
-            self.total_distance.append(int(self.maze_env.reward_generator.calculator.total_cost))
-            self.n_particles.append(len(self.maze_env.reward_generator.calculator.unique_particles))
-            self.max_distance.append(int(self.maze_env.reward_generator.calculator.max_cost))
+            self.total_distance.append(
+                int(self.maze_env.reward_generator.calculator.total_cost)
+            )
+            self.n_particles.append(
+                len(self.maze_env.reward_generator.calculator.unique_particles)
+            )
+            self.max_distance.append(
+                int(self.maze_env.reward_generator.calculator.max_cost)
+            )
 
     def reset(self, **kwargs):
         obs = super().reset(**kwargs)
         if len(self.eval_times) > 0:
-            self.episodes.append({"x": self.eval_times,
-                                  "n_particles": self.n_particles,
-                                 "distance": self.total_distance,
-                                  "max_distance": self.max_distance})
+            self.episodes.append(
+                {
+                    "x": self.eval_times,
+                    "n_particles": self.n_particles,
+                    "distance": self.total_distance,
+                    "max_distance": self.max_distance,
+                }
+            )
         self.step_counter = 0
         self.last_eval = -self.eval_interval
         self.eval_times = []
@@ -152,7 +162,7 @@ class EpisodeInformationAggregator:
 
             if done:
                 # logging.debug("{}; {}".format(self.step_buffer[i], info))
-                if info.get('TimeLimit.truncated', False):
+                if info.get("TimeLimit.truncated", False):
                     self.n_failed_episodes += 1
                     self.failed_reward += self.reward_buffer[i]
                     self.failed_steps += self.step_buffer[i]
@@ -212,41 +222,60 @@ class EpisodeInformationAggregator:
 
         logging.info(
             "Performed {} episodes with a success rate of {:.2%} an average reward of {:.4f} and an average of {:.4f} steps.".format(
-                self.total_episodes,
-                success_rate,
-                self.mean_reward,
-                self.mean_steps)
+                self.total_episodes, success_rate, self.mean_reward, self.mean_steps
+            )
         )
-        logging.info("Success Rate: {}/{} = {:.2%}".format(self.n_successful_episodes, self.total_episodes, success_rate))
+        logging.info(
+            "Success Rate: {}/{} = {:.2%}".format(
+                self.n_successful_episodes, self.total_episodes, success_rate
+            )
+        )
         if self.n_successful_episodes > 0:
-            logging.info("Average reward if episode was successful: {:.4f}".format(
-                self.successful_reward / self.n_successful_episodes))
-            logging.info("Average length if episode was successful: {:.4f}".format(
-                self.successful_steps / self.n_successful_episodes))
+            logging.info(
+                "Average reward if episode was successful: {:.4f}".format(
+                    self.successful_reward / self.n_successful_episodes
+                )
+            )
+            logging.info(
+                "Average length if episode was successful: {:.4f}".format(
+                    self.successful_steps / self.n_successful_episodes
+                )
+            )
         if self.n_failed_episodes > 0:
-            logging.info("Average reward if episode was not successful: {:.4f}".format(
-                self.failed_reward / self.n_failed_episodes))
+            logging.info(
+                "Average reward if episode was not successful: {:.4f}".format(
+                    self.failed_reward / self.n_failed_episodes
+                )
+            )
 
         if self.path:
             self._save_results(success_rate)
 
     def _save_results(self, success_rate):
         output = dict()
-        output['n_episodes'] = self.total_episodes
-        output['n_successful_episodes'] = self.n_successful_episodes
-        output['n_failed_episodes'] = self.n_failed_episodes
-        output['success_rate'] = round(success_rate, 4)
-        output['total_reward'] = self.total_reward
-        output['reward_per_episode'] = round(self.mean_reward, 4)
-        output['avg_episode_length'] = round(self.mean_steps, 4)
+        output["n_episodes"] = self.total_episodes
+        output["n_successful_episodes"] = self.n_successful_episodes
+        output["n_failed_episodes"] = self.n_failed_episodes
+        output["success_rate"] = round(success_rate, 4)
+        output["total_reward"] = self.total_reward
+        output["reward_per_episode"] = round(self.mean_reward, 4)
+        output["avg_episode_length"] = round(self.mean_steps, 4)
 
         if self.n_successful_episodes > 0:
-            output['reward_on_success'] = round(float(self.successful_reward / self.n_successful_episodes), 4)
-            output['episode_length_on_success'] = round(float(self.successful_steps / self.n_successful_episodes))
+            output["reward_on_success"] = round(
+                float(self.successful_reward / self.n_successful_episodes), 4
+            )
+            output["episode_length_on_success"] = round(
+                float(self.successful_steps / self.n_successful_episodes)
+            )
 
         if self.n_failed_episodes > 0:
-            output['reward_on_fail'] = round(float(self.failed_reward / self.n_failed_episodes), 4)
+            output["reward_on_fail"] = round(
+                float(self.failed_reward / self.n_failed_episodes), 4
+            )
 
-        self.last_save = os.path.join(self.path, "evaluation_{}.yml".format(get_timestamp()))
+        self.last_save = os.path.join(
+            self.path, "evaluation_{}.yml".format(get_timestamp())
+        )
         logging.info("Saving results to {}".format(self.last_save))
         config_util.save_config(output, self.last_save)

@@ -17,8 +17,12 @@ class WarpGrayscaleFrame(gym.ObservationWrapper):
         gym.ObservationWrapper.__init__(self, env)
         self.width = width
         self.height = height
-        self.observation_space = gym.spaces.Box(low=0, high=255, shape=(self.height, self.width, 1),
-                                            dtype=env.observation_space.dtype)
+        self.observation_space = gym.spaces.Box(
+            low=0,
+            high=255,
+            shape=(self.height, self.width, 1),
+            dtype=env.observation_space.dtype,
+        )
 
     def observation(self, frame):
         """
@@ -27,7 +31,9 @@ class WarpGrayscaleFrame(gym.ObservationWrapper):
         :param frame: ([int] or [float]) environment frame
         :return: ([int] or [float]) the observation
         """
-        frame = cv2.resize(frame, (self.width, self.height), interpolation=cv2.INTER_AREA)
+        frame = cv2.resize(
+            frame, (self.width, self.height), interpolation=cv2.INTER_AREA
+        )
         return frame[:, :, None]
 
 
@@ -35,6 +41,7 @@ class ObservationNoiseWrapper(gym.ObservationWrapper):
     """
     Adds gaussian noise to the observation
     """
+
     def __init__(self, env, scale=0.01):
         super(ObservationNoiseWrapper, self).__init__(env)
         self.var = scale
@@ -43,7 +50,9 @@ class ObservationNoiseWrapper(gym.ObservationWrapper):
 
     def observation(self, observation):
         gauss = np.random.normal(self.mean, self.sigma, observation.shape)
-        result = np.clip(observation + gauss*255, 0, 255).astype(self.observation_space.dtype)
+        result = np.clip(observation + gauss * 255, 0, 255).astype(
+            self.observation_space.dtype
+        )
         return result
 
 
@@ -75,9 +84,13 @@ class NoObsWrapper(gym.Wrapper):
         self.counter = np.array([0])
         self.rew_is_obs = rew_is_obs
         if rew_is_obs:
-            self.observation_space = gym.spaces.Box(low=0, high=np.inf, shape=(2,), dtype=np.float)
+            self.observation_space = gym.spaces.Box(
+                low=0, high=np.inf, shape=(2,), dtype=np.float
+            )
         else:
-            self.observation_space = gym.spaces.Box(low=0, high=np.inf, shape=(1,), dtype=np.int64)
+            self.observation_space = gym.spaces.Box(
+                low=0, high=np.inf, shape=(1,), dtype=np.int64
+            )
 
     def step(self, action):
         obs, rew, done, info = super(NoObsWrapper, self).step(action)
@@ -104,7 +117,16 @@ class VecImageRecorder(VecEnvWrapper):
     :param output_directory: (str) Output directory for the gifs. Individual files will be named with a timestamp
     :param record_obs: (bool) If true the recorder records observations instead of the rgb_array output of the env.
     """
-    def __init__(self, env, output_directory, record_obs=False, format: str = "gif", unvec=False, reduction=12):
+
+    def __init__(
+        self,
+        env,
+        output_directory,
+        record_obs=False,
+        format: str = "gif",
+        unvec=False,
+        reduction=12,
+    ):
         VecEnvWrapper.__init__(self, env)
         prefix = "obs_" if record_obs else ""
         self.recorders = []
@@ -112,9 +134,17 @@ class VecImageRecorder(VecEnvWrapper):
         self.last = reduction
         if unvec:
             for i in range(self.num_envs):
-                self.recorders.append(self._create_recorder(output_directory, prefix="{}_{}".format(i, prefix), format=format))
+                self.recorders.append(
+                    self._create_recorder(
+                        output_directory,
+                        prefix="{}_{}".format(i, prefix),
+                        format=format,
+                    )
+                )
         else:
-            self.recorders.append(self._create_recorder(output_directory, prefix, format))
+            self.recorders.append(
+                self._create_recorder(output_directory, prefix, format)
+            )
 
         self.unvec = unvec
         self.record_obs = record_obs
@@ -172,9 +202,12 @@ class VecScaledFloatFrame(VecEnvWrapper):
     """
     Scales image observations to [0.0, 1.0]. May be less memory efficient due to float conversion.
     """
+
     def __init__(self, env, dtype=np.float16):
-        self.dtype= dtype
-        self.observation_space = gym.spaces.Box(low=0, high=1.0, shape=env.observation_space.shape, dtype=dtype)
+        self.dtype = dtype
+        self.observation_space = gym.spaces.Box(
+            low=0, high=1.0, shape=env.observation_space.shape, dtype=dtype
+        )
         VecEnvWrapper.__init__(self, env, observation_space=self.observation_space)
 
     def reset(self):
