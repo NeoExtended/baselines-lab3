@@ -12,6 +12,7 @@ from stable_baselines3.common.vec_env import (
     DummyVecEnv,
 )
 
+from baselines_lab3 import utils
 from baselines_lab3.env.wrappers import (
     EvaluationWrapper,
     VecEvaluationWrapper,
@@ -58,22 +59,6 @@ def make_env(
     return _init
 
 
-def get_wrapper_class(wrapper):
-    """
-    Get a Gym environment wrapper class from a string describing the module and class name
-    e.g. env_wrapper: gym_minigrid.wrappers.FlatObsWrapper
-
-    :param wrapper: (str)
-    :return: (gym.Wrapper) A subclass of gym.Wrapper (class object) you can use to create another Gym env
-        giving an original env.
-    """
-    if wrapper:
-        wrapper_module = importlib.import_module(wrapper.rsplit(".", 1)[0])
-        return getattr(wrapper_module, wrapper.split(".")[-1])
-    else:
-        return None
-
-
 def create_environment(config, seed, log_dir=None, video_path=None, evaluation=False):
     """
     Creates a new environment according to the parameters from the given lab config dictionary.
@@ -107,9 +92,11 @@ def create_environment(config, seed, log_dir=None, video_path=None, evaluation=F
     for wrapper in wrappers_config:
         if isinstance(wrapper, dict):
             wrapper_name = list(wrapper.keys())[0]
-            wrappers.append((get_wrapper_class(wrapper_name), wrapper[wrapper_name]))
+            wrappers.append(
+                (utils.load_class_from_module(wrapper_name), wrapper[wrapper_name])
+            )
         elif isinstance(wrapper, str):
-            wrappers.append((get_wrapper_class(wrapper), {}))
+            wrappers.append((utils.load_class_from_module(wrapper), {}))
         else:
             raise ValueError("Got invalid wrapper with value {}".format(str(wrapper)))
 

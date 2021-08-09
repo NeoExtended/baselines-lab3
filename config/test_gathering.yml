@@ -2,16 +2,23 @@ algorithm:
   name: "ppo"
   verbose: 10
   policy:
-    name: CnnPolicy
+    name: ActorCriticCustomPolicy
+#    features_extractor_class: policies.CNNExtractor
+#    features_extractor_kwargs:
+#      arch:
+#        - ["conv", 32, 8, 4]
+#        - ["pool", 2, 2]
+#        - ["conv", 64, 4, 2]
+#        - ["conv", 64, 3, 1]
   tensorboard_log: true
   clip_range: 0.1
   ent_coef: 0.0014
   gamma: 0.9999
   gae_lambda: 0.95
   learning_rate: 0.001
-  n_steps: 2048
-  batch_size: 1024
-  n_epochs: 15
+  n_steps: 256
+  batch_size: 2048
+  n_epochs: 16
 
 env:
   name: "gym_maze:Maze0318Continuous-v0"
@@ -19,9 +26,7 @@ env:
     - env.wrappers.WarpGrayscaleFrame
     - stable_baselines3.common.atari_wrappers.MaxAndSkipEnv:
         skip: 4
-  n_envs: 32
-  frame_stack:
-    n_stack: 4
+  n_envs: 64
   n_particles: 256
   reward_kwargs:
     gathering_reward: 0.0

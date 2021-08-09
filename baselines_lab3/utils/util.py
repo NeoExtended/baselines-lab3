@@ -1,12 +1,13 @@
 """
 General helper functions.
 """
-
+import importlib
 import os
 import time
 from datetime import datetime
 from subprocess import Popen, PIPE
 import logging
+from typing import Type, Any, Optional
 
 import gym
 import numpy as np
@@ -14,6 +15,21 @@ from stable_baselines3.common.vec_env import VecEnvWrapper
 
 log_dir = None
 TIMESTAMP_FORMAT = "%Y_%m_%d_%H%M%S"
+
+
+def load_class_from_module(identifier: str) -> Optional[Type[Any]]:
+    """
+    Dynamically loads a class from a given module.
+
+    :param identifier: A fully qualified class name (e.g. baselines_lab3.experiment.scheduler.Scheduler)
+    :return: The imported type. May be none, if the import was not successful.
+    """
+    if identifier:
+        wrapper_module = importlib.import_module(identifier.rsplit(".", 1)[0])
+        return getattr(wrapper_module, identifier.split(".")[-1])
+    else:
+        logging.warning(f"Could not import class {identifier}")
+        return None
 
 
 def get_timestamp(pattern=TIMESTAMP_FORMAT):

@@ -1,9 +1,9 @@
 import copy
 import logging
+from typing import Any, Dict
 
 import gym
 
-# from stable_baselines import PPO2, A2C, ACER, ACKTR, DQN, HER, DDPG, TRPO, SAC, TD3
 from stable_baselines3 import PPO, A2C, DQN, HER, SAC, TD3
 from stable_baselines3.common.base_class import BaseAlgorithm
 
@@ -14,7 +14,7 @@ from baselines_lab3.utils import util
 ALGOS = {"a2c": A2C, "dqn": DQN, "her": HER, "sac": SAC, "ppo": PPO, "td3": TD3}
 
 
-def create_model(config: dict, env: gym.Env, seed: int) -> BaseAlgorithm:
+def create_model(config: Dict[str, Any], env: gym.Env, seed: int) -> BaseAlgorithm:
     """
     Creates a stable-baselines model according to the given lab configuration.
     :param config: (dict) The current lab model configuration (from config['algorithm']).
@@ -40,7 +40,7 @@ def create_model(config: dict, env: gym.Env, seed: int) -> BaseAlgorithm:
             "Loading pretrained model from {}.".format(config["trained_agent"])
         )
 
-        return ALGOS[name].load(
+        model = ALGOS[name].load(
             config["trained_agent"],
             seed=seed,
             env=env,
@@ -53,7 +53,7 @@ def create_model(config: dict, env: gym.Env, seed: int) -> BaseAlgorithm:
         logging.info("Creating new model for {}.".format(name))
         policy_name = policy_config.pop("name")
 
-        return ALGOS[name](
+        model = ALGOS[name](
             seed=seed,
             policy=policy_name,
             policy_kwargs=policy_config,
@@ -62,6 +62,10 @@ def create_model(config: dict, env: gym.Env, seed: int) -> BaseAlgorithm:
             verbose=verbose,
             **config
         )
+
+    logging.info("Network Architecture:")
+    logging.info(model.policy)
+    return model
 
 
 def _get_tensorflow_log_location(tlog):
