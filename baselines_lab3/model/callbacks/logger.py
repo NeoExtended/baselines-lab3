@@ -107,13 +107,14 @@ class TensorboardLogger(BaseCallback):
             self.n_episodes[i] = len(ep_reward)
 
     def _write_config(self):
-        hparams = deepcopy(self.config)
-        for key in hparams:
-            if isinstance(hparams[key], dict):
-                hparams[key] = json.dumps(hparams[key])
+        # hparams = deepcopy(self.config)
+        # for key in hparams:
+        #     if isinstance(hparams[key], dict):
+        #         hparams[key] = json.dumps(hparams[key])
 
-        self.tb_formatter.writer.add_hparams(hparams, {"test": 0.0})
-        self.tb_formatter.writer.flush()
+        # self.tb_formatter.writer.add_hparams(hparams, {"test": 0.0})
+        self.tb_formatter.writer.add_text("config", json.dumps(self.config))
+        # self.tb_formatter.writer.flush()
 
     def _write_summary(self):
         if len(self.ep_len_buffer) > 0:
