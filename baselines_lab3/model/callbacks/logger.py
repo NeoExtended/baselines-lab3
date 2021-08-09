@@ -1,9 +1,8 @@
 import json
-import time
 from collections import deque
 from copy import deepcopy
+from typing import Dict, Any, Optional
 
-import yaml
 from stable_baselines3.common.callbacks import BaseCallback
 from stable_baselines3.common.logger import TensorBoardOutputFormat
 from stable_baselines3.common.vec_env.base_vec_env import VecEnv
@@ -14,22 +13,25 @@ from baselines_lab3.utils import safe_mean, unwrap_vec_env
 class TensorboardLogger(BaseCallback):
     """
     Logs additional values into the tensorboard log. Can be used as a callback for all learning algorithms.
+
     :param smoothing: (int) Number of episodes over which the running average for episode length and return
         will be calculated.
     :param min_log_delay: (int) Minimum number of timesteps between log entries.
     :param config: (dict) Lab config. Will be logged into tensorboard log at step 0 if set.
     """
-    def __init__(self, smoothing=100, min_log_delay=500, verbose=0, config=None):
+
+    def __init__(
+        self,
+        smoothing: int = 100,
+        min_log_delay: int = 500,
+        verbose: int = 0,
+        config: Optional[Dict[str, Any]] = None,
+    ):
         super(TensorboardLogger, self).__init__(verbose)
         self.ep_len_buffer = deque(maxlen=smoothing)
         self.reward_buffer = deque(maxlen=smoothing)
-        self.fps_buffer = deque(maxlen=smoothing)
-        self.extrinsic_rew_buffer = deque(maxlen=smoothing)
-        self.intrinsic_rew_buffer = deque(maxlen=smoothing)
         self.n_episodes = None
-        self.t_start = time.time()
         self.last_timesteps = 0
-        self.first_step = True
         self.min_log_delay = min_log_delay
         self.config = config
         self.tb_formatter = None
@@ -40,6 +42,7 @@ class TensorboardLogger(BaseCallback):
 
     def _on_step(self) -> bool:
         if self.num_timesteps - self.last_timesteps > self.min_log_delay:
+            self.last_timesteps = self.num_timesteps
             self._retrieve_values()
             self._write_summary()
         return True
@@ -51,9 +54,6 @@ class TensorboardLogger(BaseCallback):
         self.ep_len_buffer.clear()
         self.reward_buffer.clear()
         self.n_episodes = None
-        self.first_step = True
-        self.last_timesteps = 0
-        self.t_start = time.time()
 
     def _initialize(self):
         """
@@ -69,7 +69,10 @@ class TensorboardLogger(BaseCallback):
         # Save reference to tensorboard formatter object
         # note: the failure case (not formatter found) is not handled here, should be done with try/except.
         self.tb_formatter = next(
-            formatter for formatter in output_formats if isinstance(formatter, TensorBoardOutputFormat))
+            formatter
+            for formatter in output_formats
+            if isinstance(formatter, TensorBoardOutputFormat)
+        )
 
     def _retrieve_values(self):
         """
@@ -95,7 +98,9 @@ class TensorboardLogger(BaseCallback):
         episode_rewards = env.env_method("get_episode_rewards")
         episode_lengths = env.env_method("get_episode_lengths")
 
-        for i, (ep_reward, ep_length) in enumerate(zip(episode_rewards, episode_lengths)):
+        for i, (ep_reward, ep_length) in enumerate(
+            zip(episode_rewards, episode_lengths)
+        ):
             known = self.n_episodes[i]
             self.ep_len_buffer.extend(ep_length[known:])
             self.reward_buffer.extend(ep_reward[known:])
@@ -112,14 +117,7 @@ class TensorboardLogger(BaseCallback):
 
     def _write_summary(self):
         if len(self.ep_len_buffer) > 0:
-            self.logger.record('episode_length/ep_length_mean', safe_mean(self.ep_len_buffer))
-            self.logger.record('reward/ep_reward_mean', safe_mean(self.reward_buffer))
-
-        steps = self.num_timesteps - self.last_timesteps
-        t_now = time.time()
-        fps = int(steps / (t_now - self.t_start))
-        self.t_start = t_now
-        self.last_timesteps = self.num_timesteps
-        self.fps_buffer.append(fps)
-
-        self.logger.record('steps_per_second', safe_mean(self.fps_buffer))
+            self.logger.record(
+                "episode_length/ep_length_mean", safe_mean(self.ep_len_buffer)
+            )
+            self.logger.record("reward/ep_reward_mean", safe_mean(self.reward_buffer))
