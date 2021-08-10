@@ -1,4 +1,4 @@
-from typing import List, Tuple, Union, Type
+from typing import List, Tuple, Union, Type, Optional
 
 import gym
 import torch
@@ -15,6 +15,7 @@ class CNNExtractor(BaseFeaturesExtractor):
         arch: List[Union[Tuple[str, int, int], Tuple[str, int, int, int]]],
         features_dim: int = 512,
         activation: Type[nn.Module] = nn.LeakyReLU,
+        downsample_images: Optional[Tuple[int, int]] = None,
     ):
         super(CNNExtractor, self).__init__(observation_space, features_dim)
         # We assume CxHxW images (channels first)
@@ -27,12 +28,15 @@ class CNNExtractor(BaseFeaturesExtractor):
             "please check it using our env checker:\n"
             "https://stable-baselines3.readthedocs.io/en/master/common/env_checker.html"
         )
+        self.downsample = downsample_images
         self._build_cnn(observation_space, arch, activation)
 
         # Compute shape by doing one forward pass
         with torch.no_grad():
             n_flatten = self.cnn(
-                torch.as_tensor(observation_space.sample()[None]).float()
+                self._downsample(
+                    torch.as_tensor(observation_space.sample()[None]).float()
+                )
             ).shape[1]
 
         self.linear = nn.Sequential(nn.Linear(n_flatten, features_dim), activation())
@@ -41,7 +45,7 @@ class CNNExtractor(BaseFeaturesExtractor):
         self,
         observation_space: gym.spaces.Box,
         arch: List[Union[Tuple[str, int, int], Tuple[str, int, int, int]]],
-        activation: nn.Module = nn.LeakyReLU,
+        activation: Type[nn.Module] = nn.LeakyReLU,
     ):
         current_input = observation_space.shape[0]
         components = []
@@ -65,8 +69,13 @@ class CNNExtractor(BaseFeaturesExtractor):
         components.append(nn.Flatten())
         self.cnn = nn.Sequential(*components)
 
+    def _downsample(self, observations: torch.Tensor) -> torch.Tensor:
+        if self.downsample:
+            return nn.functional.interpolate(observations, self.downsample)
+        return observations
+
     def forward(self, observations: torch.Tensor) -> torch.Tensor:
-        return self.linear.forward(self.cnn.forward(observations))
+        return self.linear.forward(self.cnn.forward(self._downsample(observations)))
 
 
 class NatureCNN(CNNExtractor):
@@ -84,9 +93,10 @@ class NatureCNN(CNNExtractor):
         self,
         observation_space: gym.spaces.Box,
         features_dim: int = 512,
-        activation: nn.Module = nn.LeakyReLU,
+        activation: Type[nn.Module] = nn.LeakyReLU,
+        downsample_images: Optional[Tuple[int, int]] = None,
     ):
         arch = [("conv", 32, 8, 4), ("conv", 64, 4, 2), ("conv", 64, 3, 1)]
         super(NatureCNN, self).__init__(
-            observation_space, arch, features_dim, activation
+            observation_space, arch, features_dim, activation, downsample_images
         )
