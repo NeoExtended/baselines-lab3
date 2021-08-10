@@ -8,6 +8,7 @@ from pathlib import Path
 import numpy as np
 import matplotlib.pyplot as plt
 from stable_baselines3.common.vec_env import VecVideoRecorder
+from stable_baselines3.common.callbacks import EvalCallback, CheckpointCallback
 import yaml
 
 from baselines_lab3.env import create_environment
@@ -282,17 +283,13 @@ class TrainSession(Session):
         del self.saver
 
     def _run_experiment(self):
-        callbacks = [self.saver, TensorboardLogger(config=self.config)]
+        callbacks = [self.saver, TensorboardLogger(config=self.config)]  # TODO
         if self.config["meta"].get("record_images", False):
             callbacks.append(ObservationLogger())
 
         logging.info("Starting training.")
         self.agent.learn(self.config["meta"]["n_timesteps"], callback=callbacks)
-
-        # Save model at the end of the learning process and do some cleanup.
-        self.saver.save(self.agent)
         self.env.close()
-        self.saver.close()
 
 
 class SearchSession(Session):

@@ -2,6 +2,7 @@ import copy
 import importlib
 import logging
 import os
+from typing import Any, Dict, Optional, List, Type, Tuple, Union
 
 import gym
 from stable_baselines3.common.monitor import Monitor
@@ -21,6 +22,7 @@ from baselines_lab3.env.wrappers import (
     VecStepSave,
 )
 from baselines_lab3.env.wrappers.evaluation_wrappers import ParticleInformationWrapper
+from baselines_lab3.env.wrappers.wrappers import VecSynchronizedNormalize
 
 
 def make_env(
@@ -59,7 +61,13 @@ def make_env(
     return _init
 
 
-def create_environment(config, seed, log_dir=None, video_path=None, evaluation=False):
+def create_environment(
+    config: Dict[str, Any],
+    seed: int,
+    log_dir: str = None,
+    video_path: str = None,
+    evaluation: bool = False,
+):
     """
     Creates a new environment according to the parameters from the given lab config dictionary.
     :param config: (dict) Lab config.
@@ -119,20 +127,20 @@ def create_environment(config, seed, log_dir=None, video_path=None, evaluation=F
 
 
 def _create_vectorized_env(
-    env_id,
-    env_kwargs,
-    n_envs,
-    multiprocessing,
-    seed,
-    log_dir,
-    wrappers,
-    normalize,
-    frame_stack,
-    video_path,
-    evaluation,
-    scale,
-    buffer_step_data,
-    algorithm_name,
+    env_id: str,
+    env_kwargs: Dict[str, Any],
+    n_envs: int,
+    multiprocessing: bool,
+    seed: int,
+    log_dir: str,
+    wrappers: List[Tuple[Type[gym.Wrapper], Dict[str, Any]]],
+    normalize: Union[bool, Dict[str, Any]],
+    frame_stack: Union[bool, Dict[str, Any]],
+    video_path: str,
+    evaluation: bool,
+    scale: Union[bool, Dict[str, Any]],
+    buffer_step_data: bool,
+    algorithm_name: str,
 ):
     env_creation_fns = [
         make_env(env_id, env_kwargs, i, seed, log_dir, wrappers, evaluation=evaluation,)

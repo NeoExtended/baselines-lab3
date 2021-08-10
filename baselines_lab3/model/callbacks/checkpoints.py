@@ -1,16 +1,67 @@
 import copy
+import glob
 import logging
 import os
 from datetime import datetime
+from typing import Any, Dict, Optional, Union
 
-from stable_baselines3.common.callbacks import BaseCallback
-from stable_baselines3.common.vec_env import VecNormalize
+import gym
+from gym.utils.seeding import create_seed
+from stable_baselines3.common.callbacks import (
+    BaseCallback,
+    EventCallback,
+    CallbackList,
+    EvalCallback,
+    CheckpointCallback,
+    EveryNTimesteps,
+)
+from stable_baselines3.common.vec_env import VecNormalize, VecEnv
 
+from baselines_lab3.env import create_environment
 from baselines_lab3.env.evaluation import Evaluator
 from baselines_lab3.utils import util
 
 
-class CheckpointManager(BaseCallback):
+class NormalizationCheckpointCallback(BaseCallback):
+    def __init__(
+        self,
+        model_path: str,
+        wrapper: VecNormalize,
+        name: str = "normalization",
+        checkpoints: bool = False,
+        verbose: int = 0,
+    ):
+        super(NormalizationCheckpointCallback, self).__init__(verbose)
+        self.model_path = model_path
+        self.wrapper = wrapper
+        self.name = name
+        self.checkpoints = checkpoints
+
+    def _on_step(self) -> bool:
+        name = f"{self.name}.pkl"
+        if self.checkpoints:
+            name = f"{self.name}_{self.num_timesteps}.pkl"
+        self.wrapper.save(os.path.join(self.model_path, name))
+        return True
+
+
+class RemoveOldCheckpoints(BaseCallback):
+    def __init__(self, path: str, name_prefix: str, n_keep: int = 5, verbose: int = 0):
+        super(RemoveOldCheckpoints, self).__init__(verbose)
+        self.path = path
+        self.prefix = name_prefix
+        self.n_keep = n_keep
+
+    def _on_step(self) -> bool:
+        files = glob.glob(os.path.join(self.path, self.prefix) + "*")
+        files.sort()
+        if len(files) > self.n_keep:
+            for f in files[: len(files) - self.n_keep]:
+                os.remove(f)
+        return True
+
+
+class CheckpointManager(CallbackList):
     """
     Class to manage model checkpoints.
     :param model_dir: (str) Target directory for all the checkpoints.
@@ -28,23 +79,23 @@ class CheckpointManager(BaseCallback):
 
     def __init__(
         self,
-        model_dir,
-        save_interval=250000,
-        n_keep=5,
-        keep_best=True,
-        n_eval_episodes=32,
-        eval_method="normal",
-        config=None,
-        env=None,
-        tb_log=False,
-        verbose=0,
+        model_dir: str,
+        save_interval: int = 250000,
+        n_keep: int = 5,
+        keep_best: bool = True,
+        n_eval_episodes: int = 32,
+        eval_method: str = "normal",
+        config: Optional[Dict[str, Any]] = None,
+        env: Optional[Union[gym.Env, VecEnv]] = None,
+        tb_log: bool = False,
+        verbose: int = 0,
     ):
-        super(CheckpointManager, self).__init__(verbose)
+
+        callbacks = []
+
         self.model_dir = model_dir
         self.save_interval = save_interval
         self.n_keep = n_keep
-        self.keep_best = keep_best
-        self.n_eval_episodes = n_eval_episodes
 
         if keep_best or env:
             assert (
@@ -52,137 +103,73 @@ class CheckpointManager(BaseCallback):
             ), "You must provide an environment configuration to evaluate the model!"
 
         self.last_models = []
-        self.best = None
-        self.best_score = float("-inf")
-        self.last_save = 0
         self.wrappers = []
         self.tb_log = tb_log
 
+        norm_wrapper = None
         if config:
             env_desc = copy.deepcopy(config["env"])
             normalization = env_desc.get("normalize", False)
-            curiosity = env_desc.get("curiosity", False)
 
             if normalization:
-                self.wrappers.append(
-                    ("normalization", "pkl", util.unwrap_vec_env(env, VecNormalize))
+                norm_wrapper = util.unwrap_vec_env(env, VecNormalize)
+
+            # The eval callback will automatically synchronize VecNormalize wrappers if they exist
+            if keep_best:
+                eval_cb = EvalCallback(
+                    eval_env=self._create_eval_env(config),
+                    n_eval_episodes=n_eval_episodes,
+                    eval_freq=max(save_interval // env.num_envs, 1),
+                    log_path=self.model_dir,
+                    best_model_save_path=self.model_dir,
+                    verbose=verbose,
+                    callback_on_new_best=NormalizationCheckpointCallback(
+                        model_path=model_dir,
+                        wrapper=norm_wrapper,
+                        name="best_model_norm",
+                    )
+                    if norm_wrapper
+                    else None,
                 )
-                # Remove unnecessary keys
-                if isinstance(normalization, dict):
-                    normalization.pop("precompute", None)
-                    normalization.pop("samples", None)
+                callbacks.append(eval_cb)
 
-            self.evaluator = Evaluator(
-                config,
-                env=env,
-                n_eval_episodes=n_eval_episodes,
-                deterministic=False,
-                eval_method=eval_method,
-            )
-
-    def close(self):
-        self.evaluator.close()
-
-    def _on_step(self) -> bool:
-        if self.num_timesteps >= self.last_save + self.save_interval:
-            self.last_save = self.num_timesteps
-            self.save(self.model)
-        return True
-
-    def _on_training_end(self) -> None:
-        self.last_save = self.num_timesteps
-        self.save(self.model)
-
-    def save(self, model):
-        """
-        Explicitly saves the given model.
-        :param model: stable-baselines model.
-        """
-        if self.n_keep > 0:
-            self._save_model(model)
-        if self.keep_best:
-            reward, steps = self._save_best_model(model)
-            self._log(reward, steps)
-
-    def _save_model(self, model):
-        logging.info("Saving last model at timestep {}".format(str(self.num_timesteps)))
-        checkpoint = self._checkpoint(
-            self.model_dir, "", self.num_timesteps, util.get_timestamp()
+        save_cb = EveryNTimesteps(
+            n_steps=save_interval,
+            callback=CallbackList(
+                [
+                    CheckpointCallback(
+                        save_freq=1, save_path=self.model_dir, verbose=verbose,
+                    ),
+                    NormalizationCheckpointCallback(
+                        model_path=model_dir,
+                        wrapper=norm_wrapper,
+                        name="norm",
+                        checkpoints=True,
+                    )
+                    if norm_wrapper
+                    else None,
+                    RemoveOldCheckpoints(
+                        path=model_dir, name_prefix="rl_model", n_keep=self.n_keep
+                    ),
+                    RemoveOldCheckpoints(
+                        path=model_dir, name_prefix="norm", n_keep=self.n_keep
+                    ),
+                ]
+            ),
         )
-        self._create_checkpoint(checkpoint, model)
-        self.last_models.append(checkpoint)
+        callbacks.append(save_cb)
+        super(CheckpointManager, self).__init__(callbacks)
 
-        if len(self.last_models) > self.n_keep:
-            old_checkpoint = self.last_models[0]
-            del self.last_models[0]
-            self._remove_checkpoint(old_checkpoint)
+    def _create_eval_env(self, config):
+        test_config = copy.deepcopy(config)
+        test_env_config = test_config["env"]
 
-    def _make_path(self, checkpoint, name, extension="zip"):
-        return os.path.join(
-            self.model_dir, self._build_filename(checkpoint, name, extension=extension)
-        )
+        test_env_config["n_envs"] = min(test_env_config.get("n_envs", 8), 32)
 
-    @staticmethod
-    def _build_filename(checkpoint, prefix, extension="zip"):
-        suffix = checkpoint["type"]
-        if len(suffix) > 0:
-            return "{}_{}_{}_{}.{}".format(
-                prefix, checkpoint["counter"], checkpoint["time"], suffix, extension
-            )
-        else:
-            return "{}_{}_{}.{}".format(
-                prefix, checkpoint["counter"], checkpoint["time"], extension
-            )
+        evaluation_specific = test_env_config.get("evaluation", {})
+        test_env_config.update(evaluation_specific)
 
-    def _save_best_model(self, model):
-        # TODO: This should be replaced by a separate callback.
-        logging.debug("Evaluating model.")
-        reward, steps = self.evaluator.evaluate(model)
-        logging.debug(
-            "Evaluation result: Avg reward: {:.4f}, Avg Episode Length: {:.2f}".format(
-                reward, steps
-            )
-        )
-
-        if reward > self.best_score:
-            logging.info(
-                "Found new best model with a mean reward of {:.4f}".format(reward)
-            )
-            self.best_score = reward
-            if self.best:
-                self._remove_checkpoint(self.best)
-
-            self.best = self._checkpoint(
-                self.model_dir, "best", self.num_timesteps, util.get_timestamp()
-            )
-            self._create_checkpoint(self.best, model)
-
-        return reward, steps
-
-    def _log(self, reward, steps):
-        if not self.tb_log:
-            return
-
-        self.logger.record("episode_length/eval_ep_length_mean", steps)
-        self.logger.record("reward/eval_ep_reward_mean", reward)
-
-    def _remove_checkpoint(self, checkpoint):
-        model_path = self._make_path(checkpoint, "model", extension="zip")
-        os.remove(model_path)
-
-        for wrapper in self.wrappers:
-            wrapper_path = self._make_path(checkpoint, wrapper[0], extension=wrapper[1])
-            os.remove(wrapper_path)
-
-    def _create_checkpoint(self, checkpoint, model):
-        model_path = self._make_path(checkpoint, "model", extension="zip")
-        if not os.path.exists(os.path.dirname(model_path)):
-            os.makedirs(os.path.dirname(model_path))
-        model.save(model_path)
-
-        for wrapper in self.wrappers:
-            save_path = self._make_path(checkpoint, wrapper[0], extension=wrapper[1])
-            wrapper[2].save(save_path)
+        return create_environment(test_config, create_seed())
 
     @classmethod
     def get_checkpoint(cls, path: str, type: str = "best", trial: int = -1) -> dict:

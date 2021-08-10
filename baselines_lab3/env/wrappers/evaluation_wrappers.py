@@ -138,7 +138,7 @@ class EpisodeInformationAggregator:
     :param smoothing: (int) Smoothing factor for running mean averages.
     """
 
-    def __init__(self, num_envs=1, path=None, smoothing=100):
+    def __init__(self, num_envs: int = 1, path: str = None, smoothing: int = 100):
         self.successful_reward = 0
         self.successful_steps = 0
         self.n_failed_episodes = 0

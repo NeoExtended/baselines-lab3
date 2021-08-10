@@ -1,8 +1,10 @@
+from typing import Union, Dict
+
 import cv2
 import gym
 import numpy as np
-from stable_baselines3.common.vec_env.base_vec_env import tile_images
-from stable_baselines3.common.vec_env import VecEnvWrapper
+from stable_baselines3.common.vec_env.base_vec_env import tile_images, VecEnv
+from stable_baselines3.common.vec_env import VecEnvWrapper, VecNormalize
 
 from baselines_lab3.utils.recorder import GifRecorder, ImageSequenceRecorder
 
@@ -241,3 +243,30 @@ class VecStepSave(VecEnvWrapper):
         self.last_dones = dones
         self.last_infos = infos
         return obs, rews, dones, infos
+
+
+class VecSynchronizedNormalize(VecNormalize):
+    def __init__(
+        self,
+        venv: VecEnv,
+        source: VecNormalize,
+        training: bool = True,
+        norm_obs: bool = True,
+        norm_reward: bool = True,
+        clip_obs: float = 10.0,
+        clip_reward: float = 10.0,
+        gamma: float = 0.99,
+        epsilon: float = 1e-8,
+    ):
+
+        super(VecSynchronizedNormalize, self).__init__(
+            venv, training, norm_obs, norm_reward, clip_obs, clip_reward, gamma, epsilon
+        )
+        self.source = source
+        self.training = False
+
+    def reset(self) -> Union[np.ndarray, Dict[str, np.ndarray]]:
+        self.obs_rms = self.source.obs_rms
+        self.ret_rms = self.source.ret_rms
+        obs = self.venv.reset()
+        return obs

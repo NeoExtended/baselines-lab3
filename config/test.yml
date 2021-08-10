@@ -4,6 +4,7 @@ algorithm:
   policy:
     name: MlpPolicy
   tensorboard_log: true
+  n_steps: 256
   learning_rate:
     type: linear
     initial_value: 2.5e-4
