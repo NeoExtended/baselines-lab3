@@ -1,7 +1,9 @@
 from copy import deepcopy
+from typing import Dict, Any, Union, Optional
 
+import gym
 from gym.utils.seeding import create_seed
-from stable_baselines3.common.vec_env import VecNormalize
+from stable_baselines3.common.vec_env import VecNormalize, VecEnv
 
 from baselines_lab3.env import create_environment
 from baselines_lab3.env.wrappers import EvaluationWrapper, VecEvaluationWrapper
@@ -26,13 +28,13 @@ class Evaluator:
 
     def __init__(
         self,
-        config=None,
-        n_eval_episodes=32,
-        deterministic=True,
-        render=False,
-        eval_method="normal",
-        env=None,
-        seed=None,
+        config: Dict[str, Any] = None,
+        n_eval_episodes: int = 32,
+        deterministic: bool = True,
+        render: bool = False,
+        eval_method: str = "normal",
+        env: Optional[Union[gym.Env, VecEnv]] = None,
+        seed: Optional[int] = None,
     ):
         self.eval_method = eval_method
         self.config = config
@@ -57,12 +59,8 @@ class Evaluator:
             if test_env_config["n_envs"] > 32:
                 test_env_config["n_envs"] = 32
 
-            # Disable dynamic episode length on evaluation to get comparable test results independent of rewards.
-            if test_env_config.get("reward_kwargs", None):
-                if test_env_config["reward_kwargs"].get(
-                    "dynamic_episode_length", False
-                ):
-                    test_env_config["reward_kwargs"]["dynamic_episode_length"] = False
+            evaluation_specific = test_env_config.get("evaluation", {})
+            test_env_config.update(evaluation_specific)
 
             self.test_env = create_environment(test_config, seed, evaluation=True)
             self.eval_wrapper = unwrap_env(
