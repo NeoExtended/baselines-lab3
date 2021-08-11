@@ -181,7 +181,7 @@ def read_config(config_file):
     if ext == ".json":
         config = json.load(file)
     elif ext == ".yml":
-        config = yaml.load(file)
+        config = yaml.safe_load(file)
     else:
         raise NotImplementedError("File format unknown")
 

@@ -9,7 +9,7 @@ import numpy as np
 try:
     import tensorflow as tf
 except ImportError:
-    logging.warning("Did not find tensorflow - reading logs will not be possible.")
+    pass
 
 # logging.getLogger('matplotlib.font_manager').disabled = True
 

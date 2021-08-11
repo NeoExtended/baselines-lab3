@@ -124,6 +124,11 @@ def parse_args(args):
 def main(args=None):
     # TODO: Multi-Level obs videos: Provide obs videos after each? wrapper.
 
+    try:
+        import tensorflow as tf
+    except ImportError:
+        logging.warning("Did not find tensorflow - reading logs will not be possible.")
+
     # parse arguments
     if args is None:
         args = sys.argv[1:]

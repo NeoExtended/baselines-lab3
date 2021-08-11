@@ -26,10 +26,19 @@ from baselines_lab3.env.wrappers.wrappers import VecSynchronizedNormalize
 
 
 def make_env(
-    env_id, env_kwargs, rank=0, seed=0, log_dir=None, wrappers=None, evaluation=False
+    env_id: str,
+    env_kwargs: Dict[str, Any],
+    rank: int = 0,
+    seed: int = 0,
+    log_dir: str = None,
+    wrappers: Optional[List[Tuple[Type[gym.Wrapper], Dict[str, Any]]]] = None,
+    evaluation: bool = False,
+    monitor: bool = False,
 ):
     """
     Helper function to multiprocess training and log the progress.
+    :param env_kwargs: Additional arguments for the environment
+    :param monitor: Weather or not to wrap the environment with a monitor wrapper.
     :param env_id: (str) Name of the environment.
     :param rank: (int) Pseudo-RNG seed shift for the environment.
     :param seed: (int) Pseudo-RNG seed for the environment.
@@ -49,10 +58,10 @@ def make_env(
             env = ParticleInformationWrapper(env, path=os.path.join(log_dir, str(rank)))
 
         if wrappers:
-            for wrapper in wrappers:
-                env = wrapper[0](env=env, **wrapper[1])
+            for wrapper, args in wrappers:
+                env = wrapper(env=env, **args)
 
-        if log_dir:
+        if monitor:
             env = Monitor(
                 env, filename=None, allow_early_resets=True
             )  # filename=os.path.join(log_dir, str(rank))
@@ -67,9 +76,11 @@ def create_environment(
     log_dir: str = None,
     video_path: str = None,
     evaluation: bool = False,
+    monitor: bool = True,
 ):
     """
     Creates a new environment according to the parameters from the given lab config dictionary.
+    :param monitor: Weather or not to wrap the environment with a Monitor wrapper.
     :param config: (dict) Lab config.
     :param seed: (int) Pseudo-RNG seed for the environment. Vectorized environments will use linear increments
         from this seed.
@@ -120,6 +131,7 @@ def create_environment(
         frame_stack,
         video_path,
         evaluation,
+        monitor,
         scale,
         record_images,
         alg_config["name"],
@@ -138,12 +150,22 @@ def _create_vectorized_env(
     frame_stack: Union[bool, Dict[str, Any]],
     video_path: str,
     evaluation: bool,
+    monitor: bool,
     scale: Union[bool, Dict[str, Any]],
     buffer_step_data: bool,
     algorithm_name: str,
 ):
     env_creation_fns = [
-        make_env(env_id, env_kwargs, i, seed, log_dir, wrappers, evaluation=evaluation,)
+        make_env(
+            env_id,
+            env_kwargs,
+            i,
+            seed,
+            log_dir,
+            wrappers,
+            evaluation=evaluation,
+            monitor=monitor,
+        )
         for i in range(n_envs)
     ]
     if multiprocessing:
