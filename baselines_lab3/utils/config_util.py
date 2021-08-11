@@ -116,6 +116,12 @@ def _clean_train_config(args, config):
             set_checkpoints(
                 config, path, config["algorithm"]["trained_agent"], args.trial
             )
+        else:
+            if config["env"].get("normalize", False):
+                if not config["env"]["normalize"].get("trained_agent", False):
+                    logging.warning(
+                        "Loading from a specific save-file requires setting a trained_agent for the normalization wrapper."
+                    )
     if config["algorithm"]["name"] in ["dqn", "ddpg"]:
         if config["env"].get("n_envs", 1) > 1:
             logging.warning(
