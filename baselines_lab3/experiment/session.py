@@ -222,13 +222,10 @@ class TrainSession(Session):
         self.video_format = args.video_format
 
     def _setup_session(self):
-        eval_method = self.config["meta"].get("eval_method", "normal")
-
         self.env = create_environment(
             config=self.config,
             seed=self.config["meta"]["seed"],
             log_dir=util.get_log_directory(),
-            evaluation="fast" in eval_method,
         )
         if self.record_video:
             self._setup_recorder(
@@ -247,12 +244,11 @@ class TrainSession(Session):
         self.saver = CheckpointManager(
             model_dir=os.path.join(util.get_log_directory(), "checkpoints"),
             save_interval=save_interval,
-            eval_method=eval_method,
             n_keep=n_keep,
             keep_best=keep_best,
             n_eval_episodes=n_eval_episodes,
             config=self.config,
-            env=self.env,
+            training_env=self.env,
             tb_log=bool(self.log),
         )
 

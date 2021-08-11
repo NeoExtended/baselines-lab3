@@ -21,6 +21,11 @@ from baselines_lab3.env import create_environment
 from baselines_lab3.env.evaluation import Evaluator
 from baselines_lab3.utils import util
 
+BEST_MODEL_NAME = "best_model"
+BEST_NORMALIZATION_NAME = "best_model_norm"
+MODEL_NAME = "rl_model"
+NORMALIZATION_NAME = "norm"
+
 
 class NormalizationCheckpointCallback(BaseCallback):
     def __init__(
@@ -72,8 +77,7 @@ class CheckpointManager(CallbackList):
     :param keep_best: Whether or not to also save the best model. The best model is determined by running a test each
         time a new model is saved. This may take some time.
     :param config: Current lab configuration. Needed to create an evaluation environment if keep_best=True
-    :param env: If the lab environment uses a running average normalization like VecNormalize, the running averages of
-        the given env will be saved along with the model.
+    :param training_env: The training environment. Required if a VecNormalization wrapper is used.
     :param tb_log: Set to true if the evaluation results should be logged. (Only works with keep_best=True)
     """
 
@@ -81,12 +85,11 @@ class CheckpointManager(CallbackList):
         self,
         model_dir: str,
         save_interval: int = 250000,
-        n_keep: int = 5,
+        n_keep: int = 3,
         keep_best: bool = True,
         n_eval_episodes: int = 32,
-        eval_method: str = "normal",
         config: Optional[Dict[str, Any]] = None,
-        env: Optional[Union[gym.Env, VecEnv]] = None,
+        training_env: Optional[Union[gym.Env, VecEnv]] = None,
         tb_log: bool = False,
         verbose: int = 0,
     ):
@@ -97,7 +100,7 @@ class CheckpointManager(CallbackList):
         self.save_interval = save_interval
         self.n_keep = n_keep
 
-        if keep_best or env:
+        if keep_best or training_env:
             assert (
                 config
             ), "You must provide an environment configuration to evaluate the model!"
@@ -108,57 +111,65 @@ class CheckpointManager(CallbackList):
 
         norm_wrapper = None
         if config:
-            env_desc = copy.deepcopy(config["env"])
-            normalization = env_desc.get("normalize", False)
+            normalization = config["env"].get("normalize", False)
 
             if normalization:
-                norm_wrapper = util.unwrap_vec_env(env, VecNormalize)
+                norm_wrapper = util.unwrap_vec_env(training_env, VecNormalize)
 
             # The eval callback will automatically synchronize VecNormalize wrappers if they exist
             if keep_best:
                 eval_cb = EvalCallback(
                     eval_env=self._create_eval_env(config),
                     n_eval_episodes=n_eval_episodes,
-                    eval_freq=max(save_interval // env.num_envs, 1),
+                    eval_freq=max(save_interval // training_env.num_envs, 1),
                     log_path=self.model_dir,
                     best_model_save_path=self.model_dir,
                     verbose=verbose,
                     callback_on_new_best=NormalizationCheckpointCallback(
                         model_path=model_dir,
                         wrapper=norm_wrapper,
-                        name="best_model_norm",
+                        name=BEST_NORMALIZATION_NAME,
                     )
                     if norm_wrapper
                     else None,
                 )
                 callbacks.append(eval_cb)
 
-        save_cb = EveryNTimesteps(
-            n_steps=save_interval,
-            callback=CallbackList(
-                [
-                    CheckpointCallback(
-                        save_freq=1, save_path=self.model_dir, verbose=verbose,
-                    ),
-                    NormalizationCheckpointCallback(
-                        model_path=model_dir,
-                        wrapper=norm_wrapper,
-                        name="norm",
-                        checkpoints=True,
-                    )
-                    if norm_wrapper
-                    else None,
-                    RemoveOldCheckpoints(
-                        path=model_dir, name_prefix="rl_model", n_keep=self.n_keep
-                    ),
-                    RemoveOldCheckpoints(
-                        path=model_dir, name_prefix="norm", n_keep=self.n_keep
-                    ),
-                ]
-            ),
+        save_cb = self._create_checkpoint_callback(
+            model_dir, norm_wrapper, save_interval, verbose
         )
         callbacks.append(save_cb)
         super(CheckpointManager, self).__init__(callbacks)
+
+    def _create_checkpoint_callback(
+        self,
+        model_dir: str,
+        norm_wrapper: Optional[VecNormalize],
+        save_interval: int,
+        verbose: int,
+    ):
+        checkpoints = [
+            CheckpointCallback(save_freq=1, save_path=self.model_dir, verbose=verbose,),
+            NormalizationCheckpointCallback(
+                model_path=model_dir,
+                wrapper=norm_wrapper,
+                name=NORMALIZATION_NAME,
+                checkpoints=True,
+            )
+            if norm_wrapper
+            else None,
+            RemoveOldCheckpoints(
+                path=model_dir, name_prefix=MODEL_NAME, n_keep=self.n_keep
+            ),
+            RemoveOldCheckpoints(
+                path=model_dir, name_prefix=NORMALIZATION_NAME, n_keep=self.n_keep
+            ),
+        ]
+        save_cb = EveryNTimesteps(
+            n_steps=save_interval,
+            callback=CallbackList([cb for cb in checkpoints if cb is not None]),
+        )
+        return save_cb
 
     def _create_eval_env(self, config):
         test_config = copy.deepcopy(config)
@@ -172,7 +183,9 @@ class CheckpointManager(CallbackList):
         return create_environment(test_config, create_seed())
 
     @classmethod
-    def get_checkpoint(cls, path: str, type: str = "best", trial: int = -1) -> dict:
+    def get_checkpoint(
+        cls, path: str, type: str = "best", trial: int = -1
+    ) -> Dict[str, Union[str, int]]:
         """
         Returns a dictionary defining a model checkpoint. The checkpoint may contain more than one archive for different objects.
         :param path: (str) Path to a log directory (should contain subdirectories for each run).
@@ -196,74 +209,22 @@ class CheckpointManager(CallbackList):
         )
 
         if type == "best":
-            model_suffix = "best"
+            checkpoint = os.path.join(cp_path, f"{BEST_MODEL_NAME}.zip")
+            normalization = os.path.join(cp_path, f"{BEST_NORMALIZATION_NAME}.pkl")
+            return cls._create_checkpoint(checkpoint, normalization)
+        elif type == "last":
+            models = glob.glob(os.path.join(cp_path, f"{MODEL_NAME}*"))
+            models.sort()
+            norms = glob.glob(os.path.join(cp_path, f"{NORMALIZATION_NAME}*"))
+            norms.sort()
+            return cls._create_checkpoint(models[-1], norms[-1])
         else:
-            model_suffix = ""
-
-        return cls._get_latest_checkpoint(cp_path, prefix="model", suffix=model_suffix)
+            raise ValueError(f"Unkown checkpoint type {type}.")
 
     @classmethod
-    def get_file_path(
-        cls, checkpoint: dict, archive_name: str, extension: str = "zip"
-    ) -> str:
-        """
-        Returns a file according to the given checkpoint and the requested archive of that checkpoint.
-        :param checkpoint: (dict) The checkpoint.
-        :param archive_name: (str) The name of the archive from the given checkpoint.
-        :param extension: (str) The extension of the archive.
-        :return: (str) Path to the requested archive of the given checkpoint.
-        """
-        file_name = cls._build_filename(checkpoint, archive_name, extension=extension)
-        file_path = os.path.join(checkpoint["path"], file_name)
-        assert os.path.exists(
-            file_path
-        ), "Could not find archive {} in the given checkpoint".format(file_name)
-        return file_path
-
-    @staticmethod
-    def get_latest_run(path):
-        runs = os.listdir(path)
-        runs.sort()
-        return os.path.join(path, runs[-1])  # Return latest run
-
-    @staticmethod
-    def _get_latest_checkpoint(path, prefix="", suffix=""):
-        files = os.listdir(path)
-
-        latest = datetime.fromisoformat("1970-01-01")
-        counter = None
-        for savepoint in files:
-            datestring = os.path.splitext(savepoint)[0]
-            if not (datestring.startswith(prefix) and datestring.endswith(suffix)):
-                continue
-
-            if len(prefix) > 0:
-                datestring = datestring[len(prefix) + 1 :]
-            if len(suffix) > 0:
-                datestring = datestring[: -(len(suffix) + 1)]
-
-            step, datestring = datestring.split("_", maxsplit=1)
-            # If no suffix is given the datestring may contain invalid data.
-            if len(datestring) > 17:
-                continue
-
-            date = datetime.strptime(datestring, util.TIMESTAMP_FORMAT)
-            if date > latest:
-                latest = date
-                counter = step
-
-        return CheckpointManager._checkpoint(
-            path, suffix, counter, latest.strftime(util.TIMESTAMP_FORMAT)
-        )
-
-    @staticmethod
-    def _checkpoint(path: str, suffix: str, counter: int, time: str) -> dict:
-        """
-        Creates a dictionary object describing a checkpoint.
-        :param path: (str) Directory containing the checkpoint files.
-        :param suffix: (str) Suffix for all the files of the checkpoint.
-        :param counter: (int) Number of steps
-        :param time: (str) Timestamp
-        :return: (dict) Dictionary containing the checkpoint information
-        """
-        return {"path": path, "counter": counter, "time": time, "type": suffix}
+    def _create_checkpoint(
+        cls, checkpoint: str, normalization: Optional[str] = None,
+    ) -> Dict[str, Union[str, int]]:
+        if normalization:
+            normalization = normalization if os.path.exists(normalization) else None
+        return {"model": checkpoint, "normalization": normalization}
