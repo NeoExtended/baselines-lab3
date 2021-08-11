@@ -178,7 +178,7 @@ class CheckpointManager(CallbackList):
         test_env_config.update(evaluation_specific)
 
         return utils.wrap_env(
-            create_environment(test_config, create_seed()), monitor_wrapper=False
+            create_environment(test_config, create_seed()), monitor_wrapper=True
         )
 
     @classmethod
