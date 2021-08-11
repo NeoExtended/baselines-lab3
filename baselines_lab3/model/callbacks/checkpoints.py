@@ -228,3 +228,9 @@ class CheckpointManager(CallbackList):
         if normalization:
             normalization = normalization if os.path.exists(normalization) else None
         return {"model": checkpoint, "normalization": normalization}
+
+    @staticmethod
+    def get_latest_run(path):
+        runs = os.listdir(path)
+        runs.sort()
+        return os.path.join(path, runs[-1])  # Return latest run

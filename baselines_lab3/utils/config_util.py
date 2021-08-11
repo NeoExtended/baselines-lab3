@@ -157,13 +157,10 @@ def set_checkpoints(config, path, type, trial=-1):
     normalization = "normalize" in config["env"] and config["env"]["normalize"]
 
     checkpoint = CheckpointManager.get_checkpoint(path, type=type, trial=trial)
-    config["algorithm"]["trained_agent"] = CheckpointManager.get_file_path(
-        checkpoint, "model"
-    )
+    config["algorithm"]["trained_agent"] = checkpoint["model"]
+
     if normalization:
-        config["env"]["normalize"]["trained_agent"] = CheckpointManager.get_file_path(
-            checkpoint, "normalization", extension="pkl"
-        )
+        config["env"]["normalize"]["trained_agent"] = checkpoint["normalization"]
 
 
 def read_config(config_file):
