@@ -1,15 +1,12 @@
 import copy
 import glob
-import logging
 import os
-from datetime import datetime
 from typing import Any, Dict, Optional, Union
 
 import gym
 from gym.utils.seeding import create_seed
 from stable_baselines3.common.callbacks import (
     BaseCallback,
-    EventCallback,
     CallbackList,
     EvalCallback,
     CheckpointCallback,
@@ -17,8 +14,8 @@ from stable_baselines3.common.callbacks import (
 )
 from stable_baselines3.common.vec_env import VecNormalize, VecEnv
 
+from baselines_lab3 import utils
 from baselines_lab3.env import create_environment
-from baselines_lab3.env.evaluation import Evaluator
 from baselines_lab3.utils import util
 
 BEST_MODEL_NAME = "best_model"
@@ -180,7 +177,9 @@ class CheckpointManager(CallbackList):
         evaluation_specific = test_env_config.get("evaluation", {})
         test_env_config.update(evaluation_specific)
 
-        return create_environment(test_config, create_seed())
+        return utils.wrap_env(
+            create_environment(test_config, create_seed()), monitor_wrapper=False
+        )
 
     @classmethod
     def get_checkpoint(
