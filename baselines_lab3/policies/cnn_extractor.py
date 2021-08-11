@@ -6,6 +6,7 @@ import torch.nn as nn
 
 from stable_baselines3.common.preprocessing import is_image_space
 from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
+from baselines_lab3 import utils
 
 
 class CNNExtractor(BaseFeaturesExtractor):
@@ -14,7 +15,7 @@ class CNNExtractor(BaseFeaturesExtractor):
         observation_space: gym.spaces.Box,
         arch: List[Union[Tuple[str, int, int], Tuple[str, int, int, int]]],
         features_dim: int = 512,
-        activation: Type[nn.Module] = nn.LeakyReLU,
+        activation: Union[Type[nn.Module], str] = nn.LeakyReLU,
         downsample_images: Optional[Tuple[int, int]] = None,
     ):
         super(CNNExtractor, self).__init__(observation_space, features_dim)
@@ -28,6 +29,10 @@ class CNNExtractor(BaseFeaturesExtractor):
             "please check it using our env checker:\n"
             "https://stable-baselines3.readthedocs.io/en/master/common/env_checker.html"
         )
+
+        if isinstance(activation, str):
+            activation = utils.load_class_from_module(activation)
+
         self.downsample = downsample_images
         self._build_cnn(observation_space, arch, activation)
 

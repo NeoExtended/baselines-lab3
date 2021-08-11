@@ -51,7 +51,7 @@ class ActorCriticCustomPolicy(ActorCriticPolicy):
         action_space: gym.spaces.Space,
         lr_schedule: Schedule,
         net_arch: Optional[List[Union[int, Dict[str, List[int]]]]] = None,
-        activation_fn: Type[nn.Module] = nn.LeakyReLU,
+        activation_fn: Union[Type[nn.Module], str] = nn.LeakyReLU,
         ortho_init: bool = True,
         use_sde: bool = False,
         log_std_init: float = 0.0,
@@ -69,6 +69,9 @@ class ActorCriticCustomPolicy(ActorCriticPolicy):
             features_extractor_class = utils.load_class_from_module(
                 features_extractor_class
             )
+        if isinstance(activation_fn, str):
+            activation_fn = utils.load_class_from_module(activation_fn)
+
         super(ActorCriticCustomPolicy, self).__init__(
             observation_space,
             action_space,
