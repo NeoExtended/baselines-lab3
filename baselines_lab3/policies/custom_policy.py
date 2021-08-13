@@ -50,7 +50,7 @@ class ActorCriticCustomPolicy(ActorCriticPolicy):
         observation_space: gym.spaces.Space,
         action_space: gym.spaces.Space,
         lr_schedule: Schedule,
-        net_arch: Optional[List[Union[int, Dict[str, List[int]]]]] = None,
+        net_arch=None,
         activation_fn: Union[Type[nn.Module], str] = nn.LeakyReLU,
         ortho_init: bool = True,
         use_sde: bool = False,
@@ -65,6 +65,8 @@ class ActorCriticCustomPolicy(ActorCriticPolicy):
         optimizer_class: Type[torch.optim.Optimizer] = torch.optim.Adam,
         optimizer_kwargs: Optional[Dict[str, Any]] = None,
     ):
+        if net_arch is None:
+            net_arch = []
         if isinstance(features_extractor_class, str):
             features_extractor_class = utils.load_class_from_module(
                 features_extractor_class
