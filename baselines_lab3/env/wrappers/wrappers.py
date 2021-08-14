@@ -19,10 +19,11 @@ class WarpGrayscaleFrame(gym.ObservationWrapper):
         gym.ObservationWrapper.__init__(self, env)
         self.width = width
         self.height = height
+        self.n_channels = env.observation_space.shape[2]
         self.observation_space = gym.spaces.Box(
             low=0,
             high=255,
-            shape=(self.height, self.width, 1),
+            shape=(self.height, self.width, self.n_channels),
             dtype=env.observation_space.dtype,
         )
 
@@ -36,7 +37,7 @@ class WarpGrayscaleFrame(gym.ObservationWrapper):
         frame = cv2.resize(
             frame, (self.width, self.height), interpolation=cv2.INTER_AREA
         )
-        return frame[:, :, None]
+        return frame
 
 
 class ObservationNoiseWrapper(gym.ObservationWrapper):
