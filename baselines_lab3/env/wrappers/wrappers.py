@@ -37,6 +37,9 @@ class WarpGrayscaleFrame(gym.ObservationWrapper):
         frame = cv2.resize(
             frame, (self.width, self.height), interpolation=cv2.INTER_AREA
         )
+        # cv2 removes the single channel axis.
+        if self.n_channels == 1:
+            return frame[:, :, np.newaxis]
         return frame
 
 
