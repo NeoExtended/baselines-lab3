@@ -32,6 +32,7 @@ meta:
 search:
   n_timesteps: 4000000
   eval_method: "normal"
+  n_evaluations: 20
   n_test_episodes: 20
   n_trials: 40
   sampler: "tpe"

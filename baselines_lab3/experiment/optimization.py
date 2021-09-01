@@ -94,7 +94,6 @@ class HyperparameterOptimizer:
         self.n_evaluations = search_config.get("n_evaluations", 15)
         # Timesteps per trial
         self.n_timesteps = search_config.get("n_timesteps", 10000)
-        self.evaluation_interval = self.n_timesteps // self.n_evaluations
         self.n_trials = search_config.get("n_trials", 10)
         self.n_jobs = search_config.get("n_jobs", 1)
         self.seed = config["meta"]["seed"]
@@ -236,11 +235,15 @@ class HyperparameterOptimizer:
             self.logger.config = trial_config
             self.logger.reset()
 
+            optuna_eval_freq = int(self.n_timesteps / self.n_evaluations)
+            # Account for parallel envs
+            optuna_eval_freq = max(optuna_eval_freq // model.get_env().num_envs, 1)
+
             evaluation_callback = TrialEvalCallback(
                 test_env,
                 trial,
                 n_eval_episodes=self.n_test_episodes,
-                eval_freq=self.evaluation_interval,
+                eval_freq=optuna_eval_freq,
                 deterministic=self.deterministic_evaluation,
             )
 
