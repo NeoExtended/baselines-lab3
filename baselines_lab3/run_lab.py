@@ -116,7 +116,7 @@ def parse_args(args):
     parser.add_argument(
         "--ignore-errors",
         action="store_true",
-        help="Weather or not to supress errors when executing multiple configs.",
+        help="Weather or not to suppress errors when executing multiple configs.",
     )
     return parser.parse_args(args=args)
 

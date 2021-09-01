@@ -12,6 +12,7 @@ from baselines_lab3.utils import unwrap_env, unwrap_vec_env
 
 class Evaluator:
     """
+    TODO: Update this class to use the new stable_baselines3 functions @see EvalCallback.
     Class for easy model evaluation. Supports multiple evaluation methods for speed/accuracy tradeoff.
     Evaluates average reward and number of steps.
 

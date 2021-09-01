@@ -145,12 +145,8 @@ class Sampler(ABC):
         :param config: (dict) Lab configuration.
         """
         alg_name = config["algorithm"]["name"]
-        if alg_name == "ppo2":
-            return PPO2Sampler(config)
-        elif alg_name == "acktr":
-            return ACKTRSampler(config)
-        elif alg_name == "acer":
-            return ACERSampler(config)
+        if alg_name == "ppo":
+            return PPOSampler(config)
         elif alg_name == "dqn":
             return DQNSampler(config)
         else:
@@ -190,82 +186,30 @@ class DQNSampler(Sampler):
         return alg_sample, env_sample
 
 
-class PPO2Sampler(Sampler):
+class PPOSampler(Sampler):
     """
-    Sampler for basic PPO2 parameters.
+    # TODO: Update sampler see https://github.com/DLR-RM/rl-baselines3-zoo/blob/master/utils/hyperparams_opt.py
+    # TODO: Enable sampler to sample network architecture and activation functions.
+    Sampler for basic PPO parameters.
     """
 
     def __init__(self, config):
         parameters = {
-            "batch_size": ("categorical", [32, 64, 128, 256]),
+            "batch_size": ("categorical", [32, 64, 128, 256, 512, 1024, 2048]),
             "n_steps": ("categorical", [16, 32, 64, 128, 256, 512, 1024, 2048]),
             "gamma": ("categorical", [0.9, 0.95, 0.98, 0.99, 0.995, 0.999, 0.9999]),
-            "learning_rate": ("loguniform", (0.5e-5, 0.2)),
+            "learning_rate": ("loguniform", (0.5e-5, 0.5)),
             "ent_coef": ("loguniform", (1e-8, 0.1)),
-            "cliprange": ("categorical", [0.05, 0.1, 0.2, 0.3, 0.4]),
-            "cliprange_vf": ("categorical", [-1, None]),
-            "noptepochs": ("categorical", [1, 5, 10, 20, 30, 50]),
-            "lam": ("categorical", [0.8, 0.9, 0.92, 0.95, 0.98, 0.99, 1.0]),
+            "clip_range": ("categorical", [0.05, 0.1, 0.2, 0.3, 0.4]),
+            #            "cliprange_vf": ("categorical", [-1, None]),
+            "n_epochs": ("categorical", [1, 5, 10, 20, 30]),
+            "gae_lambda": ("categorical", [0.8, 0.9, 0.92, 0.95, 0.98, 0.99, 1.0]),
+            "vf_coef": ("categorical", (0, 1)),
         }
         super().__init__(config, parameters)
 
     def transform_samples(self, alg_sample, env_sample):
-        batch_size = alg_sample.pop("batch_size")
-        if alg_sample["n_steps"] < batch_size:
-            alg_sample["nminibatches"] = 1
-        else:
-            alg_sample["nminibatches"] = int(alg_sample["n_steps"] / batch_size)
+        if alg_sample["n_steps"] * env_sample["n_envs"] < alg_sample["batch_size"]:
+            alg_sample["batch_size"] = alg_sample["n_steps"] * env_sample["n_envs"]
 
-        if alg_sample["n_steps"] < 100:
-            if alg_sample["noptepochs"] > 20:
-                alg_sample["noptepochs"] = 20
-
-        return alg_sample, env_sample
-
-
-class ACKTRSampler(Sampler):
-    def __init__(self, config):
-        parameters = {
-            "gamma": ("categorical", [0.9, 0.95, 0.98, 0.99, 0.995, 0.999, 0.9999]),
-            "n_steps": ("categorical", [16, 32, 64, 128]),
-            "lr_schedule": (
-                "categorical",
-                ["linear", "constant", "double_linear_con", "middle_drop"],
-            ),
-            "learning_rate": ("loguniform", (1e-5, 1.0)),
-            "ent_coef": ("loguniform", (1e-8, 0.1)),
-            "vf_coef": ("uniform", (0, 1)),
-            "gae_lambda": ("categorical", [0.8, 0.9, 0.95, 0.99, None]),
-            "async_eigen_decomp": ("categorical", [True, False]),
-        }
-        super().__init__(config, parameters)
-
-    def transform_samples(self, alg_sample, env_sample):
-        return alg_sample, env_sample
-
-
-class ACERSampler(Sampler):
-    def __init__(self, config):
-        parameters = {
-            "gamma": ("categorical", [0.9, 0.95, 0.98, 0.99, 0.995, 0.999, 0.9999]),
-            "n_steps": ("categorical", [16, 32, 64, 128, 256, 512, 1024, 2048]),
-            "lr_schedule": (
-                "categorical",
-                [
-                    "linear",
-                    "constant",
-                    "double_linear_con",
-                    "middle_drop",
-                    "double_middle_drop",
-                ],
-            ),
-            "learning_rate": ("loguniform", (1e-5, 0.2)),
-            "ent_coef": ("loguniform", (1e-8, 0.1)),
-            "q_coef": ("uniform", (0.01, 0.9)),
-            "buffer_size": ("categorical", [5000, 10000, 20000, 40000, 50000]),
-        }
-        super().__init__(config, parameters)
-
-    def transform_samples(self, alg_sample, env_sample):
-        alg_sample["replay_start"] = int(alg_sample["buffer_size"] // 5)
         return alg_sample, env_sample

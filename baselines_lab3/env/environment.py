@@ -6,11 +6,16 @@ from typing import Any, Dict, Optional, List, Type, Tuple, Union
 
 import gym
 from stable_baselines3.common.monitor import Monitor
+from stable_baselines3.common.preprocessing import (
+    is_image_space,
+    is_image_space_channels_first,
+)
 from stable_baselines3.common.vec_env import (
     VecFrameStack,
     SubprocVecEnv,
     VecNormalize,
     DummyVecEnv,
+    VecTransposeImage,
 )
 
 from baselines_lab3 import utils
@@ -198,6 +203,13 @@ def _create_vectorized_env(
 
     if buffer_step_data:
         env = VecStepSave(env)
+
+    # Wrap if needed to re-order channels
+    # (switch from channel last to channel first convention)
+    if is_image_space(env.observation_space) and not is_image_space_channels_first(
+        env.observation_space
+    ):
+        env = VecTransposeImage(env)
 
     return env
 

@@ -3,6 +3,12 @@ algorithm:
   verbose: 10
   policy:
     name: ActorCriticCustomPolicy
+    activation_fn: torch.nn.SELU
+    normalize_images: true
+    features_extractor_kwargs:
+      activation: torch.nn.SELU
+#    features_extractor_kwargs:
+#      downsample_images: [84, 84]
 #    features_extractor_class: policies.CNNExtractor
 #    features_extractor_kwargs:
 #      arch:
@@ -12,10 +18,10 @@ algorithm:
 #        - ["conv", 64, 3, 1]
   tensorboard_log: true
   clip_range: 0.1
-  ent_coef: 0.0014
-  gamma: 0.9999
+  ent_coef: 0.001
+  gamma: 0.99
   gae_lambda: 0.95
-  learning_rate: 0.001
+  learning_rate: 0.0001
   n_steps: 256
   batch_size: 2048
   n_epochs: 16
@@ -23,13 +29,18 @@ algorithm:
 env:
   name: "gym_maze:Maze0318Continuous-v0"
   wrappers:
-    - env.wrappers.WarpGrayscaleFrame
     - stable_baselines3.common.atari_wrappers.MaxAndSkipEnv:
-        skip: 4
+          skip: 4
+    - env.wrappers.WarpGrayscaleFrame
   n_envs: 64
   n_particles: 256
-  reward_kwargs:
-    gathering_reward: 0.0
+#  multichannel_obs: true
+  normalize:
+    norm_obs: false
+    norm_reward: true
+    precompute: true
+    samples: 10000
+
 
 meta:
   seed: 82

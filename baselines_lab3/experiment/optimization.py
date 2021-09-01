@@ -1,75 +1,65 @@
 import logging
 import os
 from copy import deepcopy
+from typing import Optional
 
 import numpy as np
 import optuna
+from gym.utils.seeding import create_seed
 from optuna.pruners import SuccessiveHalvingPruner, MedianPruner, NopPruner
 from optuna.samplers import RandomSampler, TPESampler
-from stable_baselines3.common.callbacks import BaseCallback
+from stable_baselines3.common.callbacks import EvalCallback
 from stable_baselines3.common.vec_env import VecEnv
 
 from baselines_lab3.env import create_environment
-from baselines_lab3.env.evaluation import Evaluator
 from baselines_lab3.experiment.samplers import Sampler
 from baselines_lab3.model import create_model
 from baselines_lab3.model.callbacks import TensorboardLogger
 from baselines_lab3.utils import send_email
 
 
-class EvaluationCallback(BaseCallback):
+class TrialEvalCallback(EvalCallback):
     """
-    Callback for model evaluation and early stopping.
+    Callback used for evaluating and reporting a trial.
     """
 
-    def __init__(self, evaluator, evaluation_interval, trial, verbose=0):
-        super(EvaluationCallback, self).__init__(verbose)
-        self.evaluator = evaluator
-        self.evaluation_interval = evaluation_interval
+    def __init__(
+        self,
+        eval_env: VecEnv,
+        trial: optuna.Trial,
+        n_eval_episodes: int = 5,
+        eval_freq: int = 10000,
+        deterministic: bool = True,
+        verbose: int = 0,
+        best_model_save_path: Optional[str] = None,
+        log_path: Optional[str] = None,
+    ):
+
+        super(TrialEvalCallback, self).__init__(
+            eval_env=eval_env,
+            n_eval_episodes=n_eval_episodes,
+            eval_freq=eval_freq,
+            deterministic=deterministic,
+            verbose=verbose,
+            best_model_save_path=best_model_save_path,
+            log_path=log_path,
+        )
         self.trial = trial
-
-        self.pruned = False
-        self.last_mean_test_reward = -np.inf
-        self.last_time_evaluated = 0
         self.eval_idx = 0
-        self.best_test_mean_reward = -np.inf
+        self.is_pruned = False
 
     def _on_step(self) -> bool:
-        if (self.num_timesteps - self.last_time_evaluated) < self.evaluation_interval:
-            return True
-
-        self.last_time_evaluated = self.num_timesteps
-        logging.debug(f"Evaluating model at {self.num_timesteps} timesteps")
-
-        mean_reward, mean_steps = self.evaluator.evaluate(self.model)
-        logging.info(
-            f"Evaluated model at {self.num_timesteps} timesteps. Reached a mean reward of {mean_reward}"
-        )
-        self.last_mean_test_reward = mean_reward
-        self.eval_idx += 1
-
-        if mean_reward > self.best_test_mean_reward:
-            self.best_test_mean_reward = mean_reward
-
-        # report best or report current ?
-        # report num_timesteps or elasped time ?
-        self.trial.report(-1 * mean_reward, self.num_timesteps)
-        # Prune trial if need
-        if self.trial.should_prune(self.num_timesteps):
-            logging.debug("Pruning - aborting training...")
-            self.pruned = True
-            return False
-
+        if self.eval_freq > 0 and self.n_calls % self.eval_freq == 0:
+            super(TrialEvalCallback, self)._on_step()
+            self.eval_idx += 1
+            # report best or report current ?
+            # report num_timesteps or elasped time ?
+            self.trial.report(self.last_mean_reward, self.eval_idx)
+            # Prune trial if need
+            if self.trial.should_prune():
+                self.is_pruned = True
+                return False
         return True
-
-    def is_pruned(self) -> bool:
-        return self.pruned
-
-    def best_mean_reward(self) -> float:
-        return self.best_test_mean_reward
-
-    def cost(self) -> float:
-        return -1 * self.best_test_mean_reward
 
 
 class HyperparameterOptimizer:
@@ -99,10 +89,9 @@ class HyperparameterOptimizer:
         self.eval_method = search_config.get("eval_method", "normal")
         self.deterministic_evaluation = search_config.get("deterministic", False)
         self.train_env = None
-        self.evaluator = None
+        self.test_env = None
         self.log_dir = log_dir
         self.logger = TensorboardLogger(config=self.config)  # TODO: Set config
-        self.integrated_evaluation = True if self.eval_method == "fast" else False
         self.verbose_mail = mail
         self.current_best = -np.inf
 
@@ -114,9 +103,7 @@ class HyperparameterOptimizer:
         sampler = self._make_sampler()
         pruner = self._make_pruner()
         logging.info("Starting optimization process.")
-        logging.info(
-            f"Sampler: {self.sampler_method} - Pruner: {self.pruner_method}"
-        )
+        logging.info(f"Sampler: {self.sampler_method} - Pruner: {self.pruner_method}")
 
         study_name = "hypersearch"
         study = optuna.create_study(
@@ -125,6 +112,7 @@ class HyperparameterOptimizer:
             pruner=pruner,
             storage=f"sqlite:///{os.path.join(self.log_dir, 'search.db')}",
             load_if_exists=True,
+            direction="maximize",
         )
         objective = self._create_objective_function()
 
@@ -178,38 +166,38 @@ class HyperparameterOptimizer:
             raise ValueError(f"Unknown sampler: {self.sampler_method}")
         return sampler
 
-    def _get_train_env(self, config):
+    def _get_envs(self, config):
         if self.train_env:
             # Create new environments if normalization layer is learned.
             if config["env"].get("normalize", None):
                 if not config["env"]["normalize"].get("precompute", False):
                     self.train_env.close()
-                    self._make_train_env(config)
+                    self._make_envs(config)
             # Create new environments if num_envs changed.
-            if isinstance(self.train_env, VecEnv):
+            elif isinstance(self.train_env, VecEnv):
                 if self.train_env.unwrapped.num_envs != config["env"].get("n_envs", 1):
                     self.train_env.close()
-                    self._make_train_env(config)
+                    self._make_envs(config)
+            else:
+                self.train_env.reset()
         else:
-            self._make_train_env(config)
+            self._make_envs(config)
 
-        return self.train_env
+        return self.train_env, self.test_env
 
-    def _make_train_env(self, config):
+    def _make_envs(self, config):
         self.train_env = create_environment(
-            config,
-            config["meta"]["seed"],
-            evaluation=self.integrated_evaluation,
-            log_dir=self.log_dir,
+            config, config["meta"]["seed"], log_dir=self.log_dir,
         )
 
-        self.evaluator = Evaluator(
-            config,
-            n_eval_episodes=self.n_test_episodes,
-            deterministic=self.deterministic_evaluation,
-            eval_method=self.eval_method,
-            env=self.train_env,
-        )
+        test_config = deepcopy(config)
+        test_env_config = test_config["env"]
+        if test_env_config["n_envs"] > 32:
+            test_env_config["n_envs"] = 32
+        if test_env_config.get("normalize", False):
+            test_env_config["normalize"]["norm_reward"] = False
+
+        self.test_env = create_environment(test_config, create_seed())
 
     def _create_objective_function(self):
         sampler = Sampler.create_sampler(self.config)
@@ -222,16 +210,21 @@ class HyperparameterOptimizer:
                 f"Sampled new configuration: algorithm: {alg_sample} env: {env_sample}"
             )
 
-            train_env = self._get_train_env(trial_config)
+            train_env, test_env = self._get_envs(trial_config)
             model = create_model(
                 trial_config["algorithm"], train_env, trial_config["meta"]["seed"]
             )
             self.logger.config = trial_config
             self.logger.reset()
 
-            evaluation_callback = EvaluationCallback(
-                self.evaluator, self.evaluation_interval, trial
+            evaluation_callback = TrialEvalCallback(
+                test_env,
+                trial,
+                n_eval_episodes=self.n_test_episodes,
+                eval_freq=self.evaluation_interval,
+                deterministic=self.deterministic_evaluation,
             )
+
             try:
                 logging.debug("Training model...")
                 model.learn(
@@ -245,8 +238,11 @@ class HyperparameterOptimizer:
                 raise optuna.exceptions.TrialPruned()
             del model
 
-            if evaluation_callback.best_mean_reward() > self.current_best:
-                self.current_best = evaluation_callback.best_mean_reward()
+            is_pruned = evaluation_callback.is_pruned
+            reward = evaluation_callback.last_mean_reward
+
+            if reward > self.current_best:
+                self.current_best = reward
                 if self.verbose_mail:
                     send_email(
                         self.verbose_mail,
@@ -258,10 +254,10 @@ class HyperparameterOptimizer:
                         ),
                     )
 
-            if evaluation_callback.is_pruned():
+            if is_pruned:
                 logging.info("Pruned trial.")
                 raise optuna.exceptions.TrialPruned()
 
-            return evaluation_callback.cost()
+            return reward
 
         return objective
