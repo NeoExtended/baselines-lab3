@@ -7,40 +7,6 @@ from stable_baselines3.common.vec_env.base_vec_env import VecEnv
 from stable_baselines3.common.vec_env import VecEnvWrapper, VecNormalize
 
 
-class WarpGrayscaleFrame(gym.ObservationWrapper):
-    def __init__(self, env, width=84, height=84):
-        """
-        Warp grayscale frames to 84x84 as done in the Nature paper and later work.
-
-        :param env: (Gym Environment) the environment
-        """
-        gym.ObservationWrapper.__init__(self, env)
-        self.width = width
-        self.height = height
-        self.n_channels = env.observation_space.shape[2]
-        self.observation_space = gym.spaces.Box(
-            low=0,
-            high=255,
-            shape=(self.height, self.width, self.n_channels),
-            dtype=env.observation_space.dtype,
-        )
-
-    def observation(self, frame):
-        """
-        returns the current observation from a frame
-
-        :param frame: ([int] or [float]) environment frame
-        :return: ([int] or [float]) the observation
-        """
-        frame = cv2.resize(
-            frame, (self.width, self.height), interpolation=cv2.INTER_AREA
-        )
-        # cv2 removes the single channel axis.
-        if self.n_channels == 1:
-            return frame[:, :, np.newaxis]
-        return frame
-
-
 class ObservationNoiseWrapper(gym.ObservationWrapper):
     """
     Adds gaussian noise to the observation

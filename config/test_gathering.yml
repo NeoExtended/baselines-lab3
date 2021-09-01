@@ -31,8 +31,9 @@ env:
   wrappers:
     - stable_baselines3.common.atari_wrappers.MaxAndSkipEnv:
           skip: 4
-    - env.wrappers.WarpGrayscaleFrame
-  n_envs: 64
+    - gym.wrappers.ResizeObservation:
+        shape: [84, 84]
+  n_envs: 8
   n_particles: 256
 #  multichannel_obs: true
   normalize:
