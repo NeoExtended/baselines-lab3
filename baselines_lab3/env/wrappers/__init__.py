@@ -6,7 +6,6 @@ from baselines_lab3.env.wrappers.wrappers import (
     VecStepSave,
     VecEnvWrapper,
     VecScaledFloatFrame,
-    WarpGrayscaleFrame,
     ObservationNoiseWrapper,
     RepeatedActionWrapper,
 )  # pylint: disable=unused-import

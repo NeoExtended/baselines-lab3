@@ -1,0 +1,35 @@
+algorithm:
+  name: "ppo"
+  verbose: 10
+  policy:
+    name: MlpPolicy
+  tensorboard_log: true
+
+env:
+  name: "CartPole-v1"
+  frame_stack:
+    n_stack: 4
+  normalize:
+    precompute: true
+    samples: 10000
+    norm_reward: false
+    norm_obs: true
+
+meta:
+  seed: 42
+  n_timesteps: 14000
+  log_dir: "./logs/Labtest_CartPole"
+  save_interval: 4000
+
+search:
+  n_timesteps: 12000
+  eval_method: "normal"
+  n_trials: 30
+  sampler: "tpe"
+  pruner:
+    method: "halving"
+    min_resource: 6000
+  env:
+    n_envs:
+      method: "categorical"
+      choices: [4, 8, 16]

@@ -1,5 +1,6 @@
 import logging
 import os
+from collections import MutableMapping
 from copy import deepcopy
 from typing import Optional
 
@@ -16,6 +17,18 @@ from baselines_lab3.experiment.samplers import Sampler
 from baselines_lab3.model import create_model
 from baselines_lab3.model.callbacks import TensorboardLogger
 from baselines_lab3.utils import send_email
+
+
+def flatten_dict(d, parent_key="", sep="_"):
+    items = []
+    for k, v in d.items():
+        new_key = parent_key + sep + k if parent_key else k
+
+        if isinstance(v, MutableMapping):
+            items.extend(flatten_dict(v, new_key, sep=sep).items())
+        else:
+            items.append((new_key, v))
+    return dict(items)
 
 
 class TrialEvalCallback(EvalCallback):
@@ -54,6 +67,7 @@ class TrialEvalCallback(EvalCallback):
             self.eval_idx += 1
             # report best or report current ?
             # report num_timesteps or elasped time ?
+            logging.info(f"Evaluated model with mean reward of {self.last_mean_reward}")
             self.trial.report(self.last_mean_reward, self.eval_idx)
             # Prune trial if need
             if self.trial.should_prune():
@@ -80,7 +94,7 @@ class HyperparameterOptimizer:
         self.n_evaluations = search_config.get("n_evaluations", 15)
         # Timesteps per trial
         self.n_timesteps = search_config.get("n_timesteps", 10000)
-        self.evaluation_interval = int(self.n_timesteps / self.n_evaluations)
+        self.evaluation_interval = self.n_timesteps // self.n_evaluations
         self.n_trials = search_config.get("n_trials", 10)
         self.n_jobs = search_config.get("n_jobs", 1)
         self.seed = config["meta"]["seed"]
@@ -171,12 +185,10 @@ class HyperparameterOptimizer:
             # Create new environments if normalization layer is learned.
             if config["env"].get("normalize", None):
                 if not config["env"]["normalize"].get("precompute", False):
-                    self.train_env.close()
                     self._make_envs(config)
             # Create new environments if num_envs changed.
             elif isinstance(self.train_env, VecEnv):
                 if self.train_env.unwrapped.num_envs != config["env"].get("n_envs", 1):
-                    self.train_env.close()
                     self._make_envs(config)
             else:
                 self.train_env.reset()
@@ -186,6 +198,10 @@ class HyperparameterOptimizer:
         return self.train_env, self.test_env
 
     def _make_envs(self, config):
+        if self.train_env:
+            self.train_env.close()
+            del self.train_env
+
         self.train_env = create_environment(
             config, config["meta"]["seed"], log_dir=self.log_dir,
         )
@@ -196,6 +212,9 @@ class HyperparameterOptimizer:
             test_env_config["n_envs"] = 32
         if test_env_config.get("normalize", False):
             test_env_config["normalize"]["norm_reward"] = False
+        if self.test_env:
+            self.test_env.close()
+            del self.test_env
 
         self.test_env = create_environment(test_config, create_seed())
 
@@ -240,6 +259,13 @@ class HyperparameterOptimizer:
 
             is_pruned = evaluation_callback.is_pruned
             reward = evaluation_callback.last_mean_reward
+            # Log params by flattening the configuration dict and replacing lists with strings.
+            params = deepcopy(trial_config)
+            params = flatten_dict(params)
+            for k in params:
+                if type(params[k]) not in [str, int, bool, float]:
+                    params[k] = str(params[k])
+            self.logger.write_hparams(params, {"reward": reward})
 
             if reward > self.current_best:
                 self.current_best = reward

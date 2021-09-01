@@ -1,13 +1,17 @@
 import json
 from collections import deque
 from copy import deepcopy
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, Union
 
 from stable_baselines3.common.callbacks import BaseCallback
 from stable_baselines3.common.logger import TensorBoardOutputFormat
 from stable_baselines3.common.vec_env.base_vec_env import VecEnv
 
 from baselines_lab3.utils import safe_mean, unwrap_vec_env
+
+import os
+from torch.utils.tensorboard import SummaryWriter
+from torch.utils.tensorboard.summary import hparams
 
 
 class TensorboardLogger(BaseCallback):
@@ -115,6 +119,13 @@ class TensorboardLogger(BaseCallback):
         # self.tb_formatter.writer.add_hparams(hparams, {"test": 0.0})
         self.tb_formatter.writer.add_text("config", json.dumps(self.config))
         # self.tb_formatter.writer.flush()
+
+    def write_hparams(
+        self,
+        hparams: Dict[str, Union[int, str, float, bool]],
+        metric_dict: Dict[str, Union[int, float]],
+    ):
+        self.tb_formatter.writer.add_hparams(hparams, metric_dict)
 
     def _write_summary(self):
         if len(self.ep_len_buffer) > 0:
