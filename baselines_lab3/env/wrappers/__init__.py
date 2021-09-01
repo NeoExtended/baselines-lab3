@@ -5,10 +5,10 @@ from baselines_lab3.env.wrappers.evaluation_wrappers import (
 from baselines_lab3.env.wrappers.wrappers import (
     VecStepSave,
     VecEnvWrapper,
-    VecImageRecorder,
     VecScaledFloatFrame,
     WarpGrayscaleFrame,
-    NoObsWrapper,
     ObservationNoiseWrapper,
     RepeatedActionWrapper,
 )  # pylint: disable=unused-import
+from baselines_lab3.env.wrappers.NoObsWrapper import NoObsWrapper
+from baselines_lab3.env.wrappers.VecImageRecorder import VecImageRecorder

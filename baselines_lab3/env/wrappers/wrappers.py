@@ -3,10 +3,8 @@ from typing import Union, Dict
 import cv2
 import gym
 import numpy as np
-from stable_baselines3.common.vec_env.base_vec_env import tile_images, VecEnv
+from stable_baselines3.common.vec_env.base_vec_env import VecEnv
 from stable_baselines3.common.vec_env import VecEnvWrapper, VecNormalize
-
-from baselines_lab3.utils.recorder import GifRecorder, ImageSequenceRecorder
 
 
 class WarpGrayscaleFrame(gym.ObservationWrapper):
@@ -79,129 +77,6 @@ class RepeatedActionWrapper(gym.ActionWrapper):
 
     def reverse_action(self, action):
         return action
-
-
-class NoObsWrapper(gym.Wrapper):
-    def __init__(self, env, rew_is_obs=False):
-        """
-        Deletes the observation from the env and replaces it with a counter which increases with each step.
-        """
-        gym.Wrapper.__init__(self, env)
-        self.counter = np.array([0])
-        self.rew_is_obs = rew_is_obs
-        if rew_is_obs:
-            self.observation_space = gym.spaces.Box(
-                low=0, high=np.inf, shape=(2,), dtype=np.float
-            )
-        else:
-            self.observation_space = gym.spaces.Box(
-                low=0, high=np.inf, shape=(1,), dtype=np.int64
-            )
-
-    def step(self, action):
-        obs, rew, done, info = super(NoObsWrapper, self).step(action)
-        self.counter[0] += 1
-        if self.rew_is_obs:
-            return np.array(self.counter[0], rew), rew, done, info
-        else:
-            return self.counter, rew, done, info
-
-    def reset(self, **kwargs):
-        super(NoObsWrapper, self).reset(**kwargs)
-        self.counter[0] = 0
-
-        if self.rew_is_obs:
-            return np.array([self.counter[0], 0])
-        else:
-            return self.counter
-
-
-class VecImageRecorder(VecEnvWrapper):
-    """
-    Records videos from the environment in gif format.
-    :param env: (VecEnv) Environment to record from.
-    :param output_directory: (str) Output directory for the gifs. Individual files will be named with a timestamp
-    :param record_obs: (bool) If true the recorder records observations instead of the rgb_array output of the env.
-    """
-
-    def __init__(
-        self,
-        env,
-        output_directory,
-        record_obs=False,
-        format: str = "gif",
-        unvec=False,
-        reduction=12,
-    ):
-        VecEnvWrapper.__init__(self, env)
-        prefix = "obs_" if record_obs else ""
-        self.recorders = []
-        self.reduction = reduction
-        self.last = reduction
-        if unvec:
-            for i in range(self.num_envs):
-                self.recorders.append(
-                    self._create_recorder(
-                        output_directory,
-                        prefix="{}_{}".format(i, prefix),
-                        format=format,
-                    )
-                )
-        else:
-            self.recorders.append(
-                self._create_recorder(output_directory, prefix, format)
-            )
-
-        self.unvec = unvec
-        self.record_obs = record_obs
-        self.unvec = unvec
-
-    def _create_recorder(self, output_dir, prefix, format):
-        if format == "gif":
-            recorder = GifRecorder(output_dir, prefix)
-        elif format == "png":
-            recorder = ImageSequenceRecorder(output_dir, prefix)
-        else:
-            raise ValueError("Unkown image format {}".format(format))
-        return recorder
-
-    def reset(self):
-        obs = self.venv.reset()
-        for recorder in self.recorders:
-            recorder.reset()
-        self._record(obs)
-        return obs
-
-    def step_wait(self):
-        obs, rews, dones, infos = self.venv.step_wait()
-        self._record(obs)
-        return obs, rews, dones, infos
-
-    def close(self):
-        for recorder in self.recorders:
-            recorder.close()
-        VecEnvWrapper.close(self)
-
-    def _record(self, obs):
-        self.last += 1
-        if self.last - self.reduction < 0:
-            return
-        else:
-            self.last = 0
-
-        if self.record_obs:
-            if self.unvec:
-                for i, recorder in enumerate(self.recorders):
-                    recorder.record(obs[i])
-            else:
-                self.recorders[0].record(tile_images(obs))
-        else:
-            if self.unvec:
-                images = self.venv.env_method("render", mode="rgb_array")
-                for i, recorder in enumerate(self.recorders):
-                    recorder.record(images[i])
-            else:
-                self.recorders[0].record(self.venv.render(mode="rgb_array"))
 
 
 class VecScaledFloatFrame(VecEnvWrapper):
