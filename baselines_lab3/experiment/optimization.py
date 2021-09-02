@@ -233,7 +233,6 @@ class HyperparameterOptimizer:
                 trial_config["algorithm"], train_env, trial_config["meta"]["seed"]
             )
             self.logger.config = trial_config
-            self.logger.reset()
 
             optuna_eval_freq = int(self.n_timesteps / self.n_evaluations)
             # Account for parallel envs

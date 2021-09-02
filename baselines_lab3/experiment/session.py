@@ -279,7 +279,7 @@ class TrainSession(Session):
         del self.saver
 
     def _run_experiment(self):
-        callbacks = [self.saver, TensorboardLogger(config=self.config)]  # TODO
+        callbacks = [self.saver, TensorboardLogger(config=self.config)]
         if self.config["meta"].get("record_images", False):
             callbacks.append(ObservationLogger())
 
