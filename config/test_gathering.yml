@@ -17,13 +17,21 @@ algorithm:
 #        - ["conv", 64, 4, 2]
 #        - ["conv", 64, 3, 1]
   tensorboard_log: true
-  clip_range: 0.1
-  ent_coef: 0.001
+  clip_range:
+    type: "linear"
+    initial_value: 0.3
+    final_value: 0.05
+  ent_coef: 0.00001
   gamma: 0.99
   gae_lambda: 0.95
-  learning_rate: 0.0001
-  n_steps: 256
-  batch_size: 2048
+  learning_rate:
+    type: "piecewise"
+    endpoints:
+      - [1.0, 0.00012]
+      - [0.8, 0.00005]
+      - [0.0, 0.00001]
+  n_steps: 128
+  batch_size: 256
   n_epochs: 16
 
 env:
@@ -45,6 +53,6 @@ env:
 
 meta:
   seed: 82
-  n_timesteps: 3000000
+  n_timesteps: 1000000
   log_dir: "./logs/Labtest"
   save_interval: 200000

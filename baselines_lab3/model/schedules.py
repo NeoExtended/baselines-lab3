@@ -69,7 +69,7 @@ class PiecewiseSchedule:
 
     def __init__(self, endpoints, interpolation="linear", outside_value=None):
         idxes = [e[0] for e in endpoints]
-        assert idxes == sorted(idxes)
+        assert idxes == sorted(idxes, reverse=True)
 
         if interpolation == "linear":
             self._interpolation = linear_interpolation
@@ -85,8 +85,8 @@ class PiecewiseSchedule:
         for (left_t, left), (right_t, right) in zip(
             self._endpoints[:-1], self._endpoints[1:]
         ):
-            if left_t <= progress < right_t:
-                alpha = float(progress - left_t) / (right_t - left_t)
+            if left_t >= progress > right_t:
+                alpha = float(left_t - progress) / (left_t - right_t)
                 return self._interpolation(left, right, alpha)
 
         # t does not belong to any of the pieces, so doom.

@@ -204,7 +204,7 @@ class PPOSampler(Sampler):
             #            "cliprange_vf": ("categorical", [-1, None]),
             "n_epochs": ("categorical", [1, 5, 10, 20, 30]),
             "gae_lambda": ("categorical", [0.8, 0.9, 0.92, 0.95, 0.98, 0.99, 1.0]),
-            "vf_coef": ("categorical", (0, 1)),
+            "vf_coef": ("uniform", (0.0, 1.0)),
         }
         super().__init__(config, parameters)
 
