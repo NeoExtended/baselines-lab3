@@ -41,7 +41,7 @@ env:
           skip: 4
     - gym.wrappers.ResizeObservation:
         shape: [84, 84]
-  n_envs: 8
+  n_envs: 64
   n_particles: 256
 #  multichannel_obs: true
   normalize:
