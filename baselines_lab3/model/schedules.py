@@ -85,7 +85,7 @@ class PiecewiseSchedule:
         for (left_t, left), (right_t, right) in zip(
             self._endpoints[:-1], self._endpoints[1:]
         ):
-            if left_t >= progress > right_t:
+            if left_t >= progress >= right_t:
                 alpha = float(left_t - progress) / (left_t - right_t)
                 return self._interpolation(left, right, alpha)
 
