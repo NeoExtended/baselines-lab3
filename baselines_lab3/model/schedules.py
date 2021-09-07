@@ -89,6 +89,9 @@ class PiecewiseSchedule:
                 alpha = float(left_t - progress) / (left_t - right_t)
                 return self._interpolation(left, right, alpha)
 
+        if progress < 0.0 and not self._outside_value:
+            return 0.0
+
         # t does not belong to any of the pieces, so doom.
         assert self._outside_value is not None
         return self._outside_value

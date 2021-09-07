@@ -25,6 +25,7 @@ from baselines_lab3.env.wrappers import (
     VecImageRecorder,
     VecScaledFloatFrame,
     VecStepSave,
+    VecAttributeLogger,
 )
 from baselines_lab3.env.wrappers.evaluation_wrappers import ParticleInformationWrapper
 from baselines_lab3.env.wrappers.wrappers import VecSynchronizedNormalize
@@ -104,6 +105,7 @@ def create_environment(
     normalize = config.pop("normalize", None)
     frame_stack = config.pop("frame_stack", None)
     multiprocessing = config.pop("multiprocessing", True)
+    log_env_attributes = config.pop("log_attributes", None)
 
     scale = config.pop("scale", None)
     logging.info(
@@ -140,6 +142,7 @@ def create_environment(
         scale,
         record_images,
         alg_config["name"],
+        log_env_attributes,
     )
 
 
@@ -159,6 +162,7 @@ def _create_vectorized_env(
     scale: Union[bool, Dict[str, Any]],
     buffer_step_data: bool,
     algorithm_name: str,
+    log_env_attributes: Optional[List[Tuple[str, str]]] = None,
 ):
     env_creation_fns = [
         make_env(
@@ -177,6 +181,9 @@ def _create_vectorized_env(
         env = SubprocVecEnv(env_creation_fns)
     else:
         env = DummyVecEnv(env_creation_fns)
+
+    if log_env_attributes:
+        env = VecAttributeLogger(env, log_dir=log_dir, attributes=log_env_attributes)
 
     if video_path:
         env = VecImageRecorder(env, video_path, record_obs=True)

@@ -9,7 +9,7 @@ from stable_baselines3.common.vec_env import VecEnvWrapper
 from baselines_lab3.utils import safe_mean, get_timestamp, config_util
 
 
-class ParticleInformationWrapper(gym.Wrapper):
+class ParticleInformationWrapper(gym.Wrapper):  # TODO: Move to gym-environments
     EXT = "episode_information.yml"
 
     def __init__(self, env, path, interval=1):
