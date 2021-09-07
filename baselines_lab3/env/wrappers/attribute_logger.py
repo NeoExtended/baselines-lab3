@@ -1,5 +1,6 @@
 import json
 import os
+import time
 from operator import attrgetter
 from typing import Optional, List, Tuple
 
@@ -18,6 +19,7 @@ class VecAttributeLogger(VecEnvWrapper):
     ):
         super(VecAttributeLogger, self).__init__(venv)
         self.reset_attributes = {a: [] for a, t in attributes if t == "reset"}
+        self.done_attributes = {a: [] for a, t in attributes if t == "done"}
         self.step_attributes = {a: [] for a, t in attributes if t == "step"}
 
         self.log_dir = log_dir
@@ -46,18 +48,37 @@ class VecAttributeLogger(VecEnvWrapper):
                 )
             else:
                 self.step_attributes[a].extend(self.venv.get_attr(a))
+        if dones.any():
+            for a in self.done_attributes:
+                if "." in a:
+                    member, attributes = a.split(".", 2)
+                    objects = self.venv.get_attr(member)
+                    self.done_attributes[a].extend(
+                        [attrgetter(attributes)(o) for o, d in zip(objects, dones) if d]
+                    )
+                else:
+                    self.done_attributes[a].extend(
+                        [a for a, d in zip(self.venv.get_attr(a), dones) if d]
+                    )
+
         return obs, rewards, dones, infos
 
     def close(self) -> None:
         if self.log_dir:
             if len(self.step_attributes) > 0:
                 with open(
-                    os.path.join(self.log_dir, "env_attribute_log_step.json"), "w"
+                    os.path.join(self.log_dir, f"env_attribute_log_step.json"), "w",
                 ) as f:
                     json.dump(self.step_attributes, f, cls=NumpyJSONEncoder)
 
+            if len(self.done_attributes) > 0:
+                with open(
+                    os.path.join(self.log_dir, f"env_attribute_log_done.json"), "w",
+                ) as f:
+                    json.dump(self.done_attributes, f, cls=NumpyJSONEncoder)
+
             if len(self.reset_attributes) > 0:
                 with open(
-                    os.path.join(self.log_dir, "env_attribute_log_reset.json"), "w"
+                    os.path.join(self.log_dir, f"env_attribute_log_reset.json"), "w",
                 ) as f:
                     json.dump(self.reset_attributes, f, cls=NumpyJSONEncoder)

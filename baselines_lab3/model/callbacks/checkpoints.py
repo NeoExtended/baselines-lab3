@@ -177,6 +177,9 @@ class CheckpointManager(CallbackList):
         evaluation_specific = test_env_config.get("evaluation", {})
         test_env_config.update(evaluation_specific)
 
+        # if test_env_config.get("log_attributes", None):
+        #     del test_env_config["log_attributes"]
+
         return utils.wrap_env(
             create_environment(test_config, create_seed()), monitor_wrapper=True
         )
