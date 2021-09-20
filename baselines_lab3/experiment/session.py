@@ -5,6 +5,7 @@ import os
 from abc import ABC, abstractmethod
 from pathlib import Path
 
+import optuna
 import numpy as np
 import matplotlib.pyplot as plt
 from stable_baselines3.common.vec_env import VecVideoRecorder
@@ -349,11 +350,21 @@ class SearchSession(Session):
         return promising[:3]
 
     def _log_study_info(self, study):
-        logging.info("Number of finished trials: {}".format(len(study.trials)))
-        logging.info("Best trial:")
+        logging.info(f"Number of finished trials: {len(study.trials)}")
         trial = study.best_trial
+        logging.info(f"Best trial: Trial {trial.number}")
 
-        logging.info("Value: {}".format(trial.value))
+        logging.info(f"Value: {trial.value}")
         logging.info("Params: ")
         for key, value in trial.params.items():
-            logging.info("  {}: {}".format(key, value))
+            logging.info(f"  {key}: {value}")
+
+        if optuna.visualization.is_available():
+            fig = optuna.visualization.plot_optimization_history(study)
+            fig.write_html(os.path.join(self.log, "optimization_history.html"))
+            fig = optuna.visualization.plot_param_importances(study)
+            fig.write_html(os.path.join(self.log, "param_importances.html"))
+        else:
+            logging.warning(
+                "Please install plotly>=4.0.0 to generate visualizations of the optimization process."
+            )

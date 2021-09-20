@@ -28,7 +28,7 @@ search:
   sampler: "tpe"
   pruner:
     method: "halving"
-    min_resource: 6000
+    min_resource: "auto"
   env:
     n_envs:
       method: "categorical"
