@@ -20,7 +20,7 @@ class TensorboardLogger(BaseCallback):
         self.tb_formatter = None
 
     def _on_step(self) -> bool:
-        pass
+        return True
 
     def _on_training_start(self) -> None:
         self._initialize()

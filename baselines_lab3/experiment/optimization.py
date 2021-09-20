@@ -67,7 +67,9 @@ class TrialEvalCallback(EvalCallback):
             self.eval_idx += 1
             # report best or report current ?
             # report num_timesteps or elasped time ?
-            logging.info(f"Evaluated model with mean reward of {self.last_mean_reward}")
+            logging.info(
+                f"Evaluated model with mean reward of {self.last_mean_reward}."
+            )
             self.trial.report(self.last_mean_reward, self.eval_idx)
             # Prune trial if need
             if self.trial.should_prune():
