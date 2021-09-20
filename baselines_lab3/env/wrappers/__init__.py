@@ -13,3 +13,4 @@ from baselines_lab3.env.wrappers.no_obs import NoObsWrapper
 from baselines_lab3.env.wrappers.vec_image_recorder import VecImageRecorder
 from baselines_lab3.env.wrappers.attribute_logger import VecAttributeLogger
 from baselines_lab3.env.wrappers.recurrent_action import RecurrentActionWrapper
+from baselines_lab3.env.wrappers.frame_skip import FrameSkip
