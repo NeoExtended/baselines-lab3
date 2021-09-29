@@ -190,6 +190,7 @@ class PPOSampler(Sampler):
     """
     # TODO: Update sampler see https://github.com/DLR-RM/rl-baselines3-zoo/blob/master/utils/hyperparams_opt.py
     # TODO: Enable sampler to sample network architecture and activation functions.
+    # TODO: Update sampler to be able to sample parameters in nested dicts (e.g. alg.policy)
     Sampler for basic PPO parameters.
     """
 

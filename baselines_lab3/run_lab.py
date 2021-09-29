@@ -71,6 +71,11 @@ def parse_args(args):
 
     train_parser = subparsers.add_parser("train")
     train_parser.add_argument(
+        "--resume",
+        action="store_true",
+        help="Resume training from the last log directory. Uses the last agent checkpoint.",
+    )
+    train_parser.add_argument(
         "--trial",
         type=int,
         help="Trial to load when resuming training (defaults to last trial from previous run).",
@@ -89,6 +94,11 @@ def parse_args(args):
     )
 
     search_parser = subparsers.add_parser("search")
+    search_parser.add_argument(
+        "--resume",
+        action="store_true",
+        help="Resume training from the last log directory. Uses the last agent checkpoint.",
+    )
     search_parser.add_argument(
         "--plot",
         help="Weather or not to plot the distribution of choosen hyperparameters",
