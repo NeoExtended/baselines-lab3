@@ -103,7 +103,7 @@ class HyperparameterOptimizer:
         self.pruner_method = search_config.get("pruner", "median")
         self.eval_method = search_config.get("eval_method", "normal")
         self.deterministic_evaluation = search_config.get("deterministic", False)
-        self.train_env = None
+        self.train_env = None  # type: VecEnv
         self.test_env = None
         self.log_dir = log_dir
         self.logger = TensorboardLogger(config=self.config)  # TODO: Set config

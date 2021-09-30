@@ -5,6 +5,7 @@ import os
 from typing import Any, Dict, Optional, List, Type, Tuple, Union
 
 import gym
+from gym_maze.wrappers.sample_hard_goals import VecHardGoalSampleWrapper
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.preprocessing import (
     is_image_space,
@@ -181,6 +182,8 @@ def _create_vectorized_env(
         env = SubprocVecEnv(env_creation_fns)
     else:
         env = DummyVecEnv(env_creation_fns)
+
+    env = VecHardGoalSampleWrapper(env)
 
     if log_env_attributes:
         env = VecAttributeLogger(env, log_dir=log_dir, attributes=log_env_attributes)
