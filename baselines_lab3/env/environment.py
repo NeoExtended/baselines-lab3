@@ -1,11 +1,9 @@
 import copy
-import importlib
 import logging
 import os
 from typing import Any, Dict, Optional, List, Type, Tuple, Union
 
 import gym
-from gym_maze.wrappers.sample_hard_goals import VecHardGoalSampleWrapper
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.preprocessing import (
     is_image_space,
@@ -17,6 +15,7 @@ from stable_baselines3.common.vec_env import (
     VecNormalize,
     DummyVecEnv,
     VecTransposeImage,
+    VecEnvWrapper,
 )
 
 from baselines_lab3 import utils
@@ -29,7 +28,6 @@ from baselines_lab3.env.wrappers import (
     VecAttributeLogger,
 )
 from baselines_lab3.env.wrappers.evaluation_wrappers import ParticleInformationWrapper
-from baselines_lab3.env.wrappers.wrappers import VecSynchronizedNormalize
 
 
 def make_env(
@@ -115,17 +113,9 @@ def create_environment(
 
     # Get tuples with (wrapper_class, wrapper_kwargs)
     wrappers_config = config.pop("wrappers", [])
-    wrappers = []
-    for wrapper in wrappers_config:
-        if isinstance(wrapper, dict):
-            wrapper_name = list(wrapper.keys())[0]
-            wrappers.append(
-                (utils.load_class_from_module(wrapper_name), wrapper[wrapper_name])
-            )
-        elif isinstance(wrapper, str):
-            wrappers.append((utils.load_class_from_module(wrapper), {}))
-        else:
-            raise ValueError("Got invalid wrapper with value {}".format(str(wrapper)))
+    wrappers = load_wrappers(wrappers_config)
+    vec_env_config = config.pop("vec_env_wrappers", [])
+    vec_env_wrappers = load_wrappers(vec_env_config)
 
     return _create_vectorized_env(
         env_id,
@@ -135,6 +125,7 @@ def create_environment(
         seed,
         log_dir,
         wrappers,
+        vec_env_wrappers,
         normalize,
         frame_stack,
         video_path,
@@ -147,6 +138,21 @@ def create_environment(
     )
 
 
+def load_wrappers(wrappers_config):
+    wrappers = []
+    for wrapper in wrappers_config:
+        if isinstance(wrapper, dict):
+            wrapper_name = list(wrapper.keys())[0]
+            wrappers.append(
+                (utils.load_class_from_module(wrapper_name), wrapper[wrapper_name])
+            )
+        elif isinstance(wrapper, str):
+            wrappers.append((utils.load_class_from_module(wrapper), {}))
+        else:
+            raise ValueError("Got invalid wrapper with value {}".format(str(wrapper)))
+    return wrappers
+
+
 def _create_vectorized_env(
     env_id: str,
     env_kwargs: Dict[str, Any],
@@ -155,6 +161,7 @@ def _create_vectorized_env(
     seed: int,
     log_dir: str,
     wrappers: List[Tuple[Type[gym.Wrapper], Dict[str, Any]]],
+    vec_env_wrappers: List[Tuple[Type[VecEnvWrapper], Dict[str, Any]]],
     normalize: Union[bool, Dict[str, Any]],
     frame_stack: Union[bool, Dict[str, Any]],
     video_path: str,
@@ -183,7 +190,8 @@ def _create_vectorized_env(
     else:
         env = DummyVecEnv(env_creation_fns)
 
-    env = VecHardGoalSampleWrapper(env)
+    for wrapper, args in vec_env_wrappers:
+        env = wrapper(venv=env, **args)
 
     if log_env_attributes:
         env = VecAttributeLogger(env, log_dir=log_dir, attributes=log_env_attributes)
