@@ -35,7 +35,9 @@ class TensorboardLogger(BaseCallback):
 
         self.single_env = config["env"].get("n_envs", 1)
         self.done = "dones" if config["algorithm"]["name"] in ["ppo", "a2c"] else "done"
-        self.info = "infos" if config["algorithm"]["name"] in ["ppo", "a2c"] else "info"
+        self.info = (
+            "infos"  # if config["algorithm"]["name"] in ["ppo", "a2c"] else "info"
+        )
 
     def _on_step(self) -> bool:
         if (
