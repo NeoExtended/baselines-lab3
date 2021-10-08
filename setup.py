@@ -14,11 +14,11 @@ setup(
         "stable-baselines3",
         "optuna",
         "imageio",
-        "keyboard",
         "torch>=1.8.1",
         "pyyaml",
         "matplotlib",
     ],
+    extras_require={"visualization": ["plotly", "scikit-learn"]},
     include_package_data=True,
     package_data={"": ["mapdata/*.csv"]},
 )
