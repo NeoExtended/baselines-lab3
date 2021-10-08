@@ -33,6 +33,10 @@ class TensorboardLogger(BaseCallback):
             a: deque(maxlen=100) for a, t in attributes if t == "info"
         }
 
+        self.single_env = config["env"].get("n_envs", 1)
+        self.done = "dones" if config["algorithm"]["name"] in ["ppo", "a2c"] else "done"
+        self.info = "infos" if config["algorithm"]["name"] in ["ppo", "a2c"] else "info"
+
     def _on_step(self) -> bool:
         if (
             len(self.step_attributes) > 0
@@ -52,7 +56,7 @@ class TensorboardLogger(BaseCallback):
             self._write_values()
 
     def _collect_data(self):
-        dones = self.locals["dones"]
+        dones = self.locals[self.done]
         for a in self.step_attributes:
             if "." in a:
                 member, attributes = a.split(".", 2)
@@ -79,7 +83,7 @@ class TensorboardLogger(BaseCallback):
                 self.info_attributes[a].extend(
                     [
                         i[a]
-                        for i, d in zip(self.locals["infos"], dones)
+                        for i, d in zip(self.locals[self.info], dones)
                         if d and not i.get("TimeLimit.truncated", False)
                     ]
                 )
