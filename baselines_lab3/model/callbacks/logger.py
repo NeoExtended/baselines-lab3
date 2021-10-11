@@ -1,4 +1,5 @@
 import json
+from operator import attrgetter
 from typing import Dict, Any, Optional, Union
 from collections import deque
 
@@ -22,7 +23,11 @@ class TensorboardLogger(BaseCallback):
         self.config = config
         self.tb_formatter = None
 
-        attributes = config["algorithm"]["tensorboard_log"]["attributes"]
+        attributes = []
+        tb_log = config["algorithm"].get("tensorboard_log", False)
+        if tb_log:
+            attributes = tb_log.get("attributes", [])
+
         self.done_attributes = {
             a: deque(maxlen=100) for a, t in attributes if t == "done"
         }
