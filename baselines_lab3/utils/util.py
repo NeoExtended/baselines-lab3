@@ -7,7 +7,8 @@ import time
 from datetime import datetime
 from subprocess import Popen, PIPE
 import logging
-from typing import Type, Any, Optional
+from typing import Type, Any, Optional, Dict, List
+from collections import abc, MutableMapping
 
 import gym
 import numpy as np
@@ -29,6 +30,42 @@ from stable_baselines3.common.vec_env import (
 
 log_dir = None
 TIMESTAMP_FORMAT = "%Y_%m_%d_%H%M%S"
+
+
+def set_nested_value(
+    dictionary: Dict[str, Any], keys: List[str], value
+) -> Dict[str, Any]:
+    dct = dictionary
+    for key in keys[:-1]:
+        try:
+            dct = dct[key]
+        except KeyError:
+            return dictionary
+    dct[keys[-1]] = value
+    return dictionary
+
+
+def delete_keys_from_dict(dictionary, keys):
+    keys_set = set(keys)
+
+    modified_dict = {}
+    for key, value in dictionary.items():
+        if key not in keys_set:
+            if isinstance(value, MutableMapping):
+                modified_dict[key] = delete_keys_from_dict(value, keys_set)
+            else:
+                modified_dict[
+                    key
+                ] = value  # or copy.deepcopy(value) if a copy is desired for non-dicts.
+    return modified_dict
+
+
+def nested_dict_iter(nested):
+    for key, value in nested.items():
+        if isinstance(value, abc.Mapping):
+            yield from nested_dict_iter(value)
+        else:
+            yield key, value
 
 
 def load_class_from_module(identifier: str) -> Optional[Type[Any]]:

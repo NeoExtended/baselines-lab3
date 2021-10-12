@@ -2,11 +2,14 @@
 Defines helper functions for reading and writing the lab config file
 """
 import collections
+import copy
 import glob
 import json
 import logging
 import os
+from collections import MutableMapping
 from pathlib import Path
+from typing import Dict, Any
 
 import yaml
 from gym.utils import seeding
@@ -29,9 +32,9 @@ def parse_config_args(config_args, args):
         if path.is_dir():
             files = path.glob("**/*.yml")
             for file in files:
-                configs.append(get_config(str(file), args))
+                configs.extend(create_tests(get_config(str(file), args)))
         else:
-            configs.append(get_config(config, args))
+            configs.extend(create_tests(get_config(config, args)))
     return configs
 
 
@@ -47,6 +50,65 @@ def get_config(config_file, args):
     config = extend_meta_data(config)
     config = clean_config(config, args)
     return config
+
+
+def create_default_values(config):
+    stack = list(config.items())
+    order = []
+    n_children = []
+    while stack:
+        key, value = stack.pop()
+        order.append(key)
+        if isinstance(value, dict):
+            if value.get("test_values", False):
+                config = util.set_nested_value(
+                    config, order, value.get("default_value")
+                )
+            else:
+                items = list(value.items())
+                n_children.append(len(items))
+                stack.extend(items)
+        else:
+            order.pop()
+            n_children[-1] = n_children[-1] - 1
+            if n_children[-1] == 0:
+                order.pop()
+                n_children.pop()
+    return config
+
+
+def create_test(config, stack, value):
+    cg = copy.deepcopy(config)
+    util.set_nested_value(cg, [k for k, v in stack], value)
+    return cg
+
+
+def create_tests(config: Dict[str, Any]):
+    found_test_cases = False
+    config_files = []
+    default_config = util.delete_keys_from_dict(
+        create_default_values(copy.deepcopy(config)), ["test_values", "default_value"]
+    )
+
+    stack = list(config.items())
+    while stack:
+        key, value = stack.pop()
+        if isinstance(value, dict):
+            if value.get("test_values", False):
+                found_test_cases = True
+                config_files.extend(
+                    [
+                        create_test(default_config, stack, v)
+                        for v in value["test_values"]
+                    ]
+                )
+            else:
+                stack.extend(value.items())
+
+    if not found_test_cases:
+        return [config]
+    else:
+        return config_files
 
 
 def resolve_imports(config):
