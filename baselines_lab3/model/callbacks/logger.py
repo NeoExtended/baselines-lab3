@@ -25,7 +25,7 @@ class TensorboardLogger(BaseCallback):
 
         attributes = []
         tb_log = config["algorithm"].get("tensorboard_log", False)
-        if tb_log:
+        if tb_log and isinstance(tb_log, dict):
             attributes = tb_log.get("attributes", [])
 
         self.done_attributes = {
