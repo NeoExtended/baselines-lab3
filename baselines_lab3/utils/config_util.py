@@ -4,12 +4,13 @@ Defines helper functions for reading and writing the lab config file
 import collections
 import copy
 import glob
+import itertools
 import json
 import logging
 import os
 from collections import MutableMapping
 from pathlib import Path
-from typing import Dict, Any
+from typing import Dict, Any, Callable, List, Tuple
 
 import yaml
 from gym.utils import seeding
@@ -53,17 +54,29 @@ def get_config(config_file, args):
 
 
 def create_default_values(config):
+    def set_default(cfg, order, value):
+        return util.set_nested_value(cfg, order, value.get("default_value"))
+
+    _, ret = config_dfs(config, "default_value", set_default)
+
+    return ret[-1]
+
+
+def config_dfs(
+    config: Dict[str, Any], callback_on: str, callback: Callable
+) -> Tuple[bool, List]:
+    found_key = False
     stack = list(config.items())
     order = []
     n_children = []
+    ret = []
     while stack:
         key, value = stack.pop()
         order.append(key)
         if isinstance(value, dict):
-            if value.get("test_values", False):
-                config = util.set_nested_value(
-                    config, order, value.get("default_value")
-                )
+            if value.get(callback_on, False):
+                found_key = True
+                ret.append(callback(config, order, value))
             else:
                 items = list(value.items())
                 n_children.append(len(items))
@@ -71,44 +84,32 @@ def create_default_values(config):
         else:
             order.pop()
             n_children[-1] = n_children[-1] - 1
-            if n_children[-1] == 0:
+            while len(n_children) > 0 and n_children[-1] == 0:
                 order.pop()
                 n_children.pop()
-    return config
-
-
-def create_test(config, stack, value):
-    cg = copy.deepcopy(config)
-    util.set_nested_value(cg, [k for k, v in stack], value)
-    return cg
+                if len(n_children) > 0:
+                    n_children[-1] = n_children[-1] - 1
+    return found_key, ret
 
 
 def create_tests(config: Dict[str, Any]):
-    found_test_cases = False
-    config_files = []
     default_config = util.delete_keys_from_dict(
         create_default_values(copy.deepcopy(config)), ["test_values", "default_value"]
     )
 
-    stack = list(config.items())
-    while stack:
-        key, value = stack.pop()
-        if isinstance(value, dict):
-            if value.get("test_values", False):
-                found_test_cases = True
-                config_files.extend(
-                    [
-                        create_test(default_config, stack, v)
-                        for v in value["test_values"]
-                    ]
-                )
-            else:
-                stack.extend(value.items())
+    def create_test(cfg, order, value):
+        tests = []
+        for v in value["test_values"]:
+            cg = copy.deepcopy(default_config)
+            tests.append(util.set_nested_value(cg, order, v))
+        return tests
+
+    found_test_cases, config_files = config_dfs(config, "test_values", create_test)
 
     if not found_test_cases:
         return [config]
     else:
-        return config_files
+        return list(itertools.chain.from_iterable(config_files))  # Unpack nested lists
 
 
 def resolve_imports(config):
