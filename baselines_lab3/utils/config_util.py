@@ -57,9 +57,12 @@ def create_default_values(config):
     def set_default(cfg, order, value):
         return util.set_nested_value(cfg, order, value.get("default_value"))
 
-    _, ret = config_dfs(config, "default_value", set_default)
+    found_key, ret = config_dfs(config, "default_value", set_default)
 
-    return ret[-1]
+    if found_key:
+        return ret[-1]
+    else:
+        return config
 
 
 def config_dfs(
