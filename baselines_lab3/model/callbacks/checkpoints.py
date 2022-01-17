@@ -1,6 +1,9 @@
 import copy
 import glob
 import os
+import re
+from operator import itemgetter
+from pathlib import Path
 from typing import Any, Dict, Optional, Union
 
 import gym
@@ -48,15 +51,25 @@ class NormalizationCheckpointCallback(BaseCallback):
 
 
 class RemoveOldCheckpoints(BaseCallback):
-    def __init__(self, path: str, name_prefix: str, n_keep: int = 5, verbose: int = 0):
+    def __init__(
+        self,
+        path: Union[str, Path],
+        name_prefix: str,
+        n_keep: int = 5,
+        verbose: int = 0,
+    ):
         super(RemoveOldCheckpoints, self).__init__(verbose)
-        self.path = path
+        self.path = Path(path)
         self.prefix = name_prefix
         self.n_keep = n_keep
+        self.regex = re.compile(f"{name_prefix}_(\\d*)")
 
     def _on_step(self) -> bool:
-        files = glob.glob(os.path.join(self.path, self.prefix) + "*")
-        files.sort()
+        files = list(self.path.glob(self.prefix + "*"))
+        counts = [int(self.regex.search(str(file)).group(1)) for file in files]
+
+        # Sort files by number of steps
+        files = [f for _, f in sorted(zip(counts, files), key=itemgetter(0))]
         if len(files) > self.n_keep:
             for f in files[: len(files) - self.n_keep]:
                 os.remove(f)

@@ -13,6 +13,7 @@ algorithm:
 
 env:
   name: "CartPole-v1"
+  multiprocessing: false
   n_envs: 8
   frame_stack:
     n_stack: 4
@@ -24,7 +25,7 @@ env:
 
 meta:
   seed: 42
-  n_timesteps: 14000
+  n_timesteps: 32000
   log_dir: "./logs/Labtest_CartPole"
   save_interval: 4000
 
