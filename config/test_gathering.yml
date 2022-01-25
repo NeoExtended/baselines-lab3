@@ -35,24 +35,30 @@ algorithm:
   n_epochs: 16
 
 env:
-  name: "gym_maze:Maze0318Continuous-v0"
+  name: "gym_gathering:CorridorAlgorithmicFixedPCFixedGoal-v0"
+#  name: "gym_environments:Maze0318Continuous-v0"
   wrappers:
     - stable_baselines3.common.atari_wrappers.MaxAndSkipEnv:
           skip: 4
     - gym.wrappers.ResizeObservation:
         shape: [84, 84]
-  n_envs: 64
-  n_particles: 256
+  n_envs: 4
+  multiprocessing: false
 #  multichannel_obs: true
   normalize:
     norm_obs: false
     norm_reward: true
     precompute: true
     samples: 10000
+  log_attributes:
+    - ["goal", "done"]
 
 
 meta:
   seed: 82
-  n_timesteps: 1000000
+  n_timesteps: 20000
   log_dir: "./logs/Labtest"
-  save_interval: 200000
+  save_interval: 10000
+  record_renders:
+    interval: 2000
+    include_obs: true

@@ -9,7 +9,11 @@ import optuna
 import numpy as np
 import matplotlib.pyplot as plt
 from stable_baselines3.common.vec_env import VecVideoRecorder
-from stable_baselines3.common.callbacks import EvalCallback, CheckpointCallback
+from stable_baselines3.common.callbacks import (
+    EvalCallback,
+    CheckpointCallback,
+    EveryNTimesteps,
+)
 import yaml
 
 from baselines_lab3.env import create_environment
@@ -21,8 +25,11 @@ from baselines_lab3.env.wrappers import (
 from baselines_lab3.experiment import Runner, HyperparameterOptimizer
 from baselines_lab3.experiment.samplers import Sampler
 from baselines_lab3.model import create_model
-from baselines_lab3.model.callbacks import CheckpointManager, TensorboardLogger
-from baselines_lab3.model.callbacks.obs_logger import ObservationLogger
+from baselines_lab3.model.callbacks import (
+    CheckpointManager,
+    TensorboardLogger,
+    RenderLogger,
+)
 from baselines_lab3.utils import util, config_util
 from baselines_lab3.utils.tensorboard import (
     Plotter,
@@ -217,6 +224,7 @@ class TrainSession(Session):
         Session.__init__(self, config, args)
         self._create_log_dir()
         self.env = None
+        self.recording_env = None
         self.agent = None
         self.saver = None
         self.record_video = args.video
@@ -276,17 +284,37 @@ class TrainSession(Session):
         self._setup_session()
         self._run_experiment()
         del self.env
+        del self.recording_env
         del self.agent
         del self.saver
 
     def _run_experiment(self):
         callbacks = [self.saver, TensorboardLogger(config=self.config)]
-        if self.config["meta"].get("record_images", False):
-            callbacks.append(ObservationLogger())
+
+        recorder_config = self.config["meta"].get("record_renders", False)
+        if recorder_config:
+            if isinstance(recorder_config, bool):
+                recorder_config = {}
+            env_config = copy.deepcopy(self.config)
+            env_config["env"]["n_envs"] = recorder_config.pop("n_envs", 4)
+            self.recording_env = create_environment(
+                config=env_config, seed=self.config["meta"]["seed"], log_dir=None,
+            )
+            callbacks.append(
+                EveryNTimesteps(
+                    n_steps=recorder_config.pop("interval", 10000),
+                    callback=RenderLogger(
+                        render_env=self.recording_env, **recorder_config
+                    ),
+                )
+            )
 
         logging.info("Starting training.")
         self.agent.learn(self.config["meta"]["n_timesteps"], callback=callbacks)
         self.env.close()
+
+        if self.recording_env is not None:
+            self.recording_env.close()
 
 
 class SearchSession(Session):

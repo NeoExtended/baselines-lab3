@@ -1,2 +1,3 @@
 from baselines_lab3.model.callbacks.checkpoints import CheckpointManager
 from baselines_lab3.model.callbacks.logger import TensorboardLogger
+from baselines_lab3.model.callbacks.render_logger import RenderLogger
