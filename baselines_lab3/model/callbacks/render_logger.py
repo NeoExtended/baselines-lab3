@@ -29,8 +29,10 @@ class RenderLogger(BaseCallback):
         if not isinstance(render_env, VecEnv):
             render_env = DummyVecEnv([lambda: render_env])
 
-        self.env = render_env
-        self.n_episodes = n_episodes if n_episodes is not None else self.env.num_envs
+        self.render_env = render_env
+        self.n_episodes = (
+            n_episodes if n_episodes is not None else self.render_env.num_envs
+        )
         self.deterministic = deterministic
         self.fps = fps
 
@@ -77,7 +79,7 @@ class RenderLogger(BaseCallback):
 
         evaluate_policy(
             self.model,
-            self.training_env,
+            self.render_env,
             n_eval_episodes=self.n_episodes,
             deterministic=self.deterministic,
             callback=callback,
