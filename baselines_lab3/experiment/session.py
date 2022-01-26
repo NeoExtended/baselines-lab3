@@ -304,7 +304,7 @@ class TrainSession(Session):
                 EveryNTimesteps(
                     n_steps=recorder_config.pop("interval", 10000),
                     callback=RenderLogger(
-                        render_env=self.recording_env, **recorder_config
+                        render_env=self.recording_env, **recorder_config, verbose=1
                     ),
                 )
             )
