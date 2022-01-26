@@ -72,6 +72,9 @@ class RenderLogger(BaseCallback):
             images.append(locals_["env"].render(mode=self.render_mode))
             observations.append(locals_["observations"])
 
+        if self.verbose > 0:
+            logging.info("Logging evaluation video.")
+
         evaluate_policy(
             self.model,
             self.training_env,

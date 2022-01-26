@@ -238,6 +238,7 @@ def _add_normalization_wrapper(env, n_envs, normalize):
     elif isinstance(normalize, dict):
         if "trained_agent" in normalize:
             path = normalize.pop("trained_agent")
+            logging.info(f"Loading pretrained normalization parameters from {path}.")
             env = VecNormalize.load(path, env)
             env.training = normalize.pop("training", True)
         elif normalize.pop("precompute", False):
