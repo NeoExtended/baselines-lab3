@@ -172,15 +172,14 @@ def _clean_search_config(args, config):
 
 def _clean_train_config(args, config):
     # Allow fast loading of recently trained agents via "last" and "best" checkpoints
-    if config["algorithm"].get("trained_agent", None) or args.resume:
-        if config["algorithm"]["trained_agent"] in ["best", "last"] or args.resume:
+    if args.resume:
+        config["algorithm"]["trained_agent"] = "last"
+
+    if config["algorithm"].get("trained_agent", None):
+        if config["algorithm"]["trained_agent"] in ["best", "last"]:
             from baselines_lab3.model.callbacks import CheckpointManager
 
-            checkpoint_type = (
-                config["algorithm"]["trained_agent"]
-                if config["algorithm"]["trained_agent"]
-                else "last"
-            )
+            checkpoint_type = config["algorithm"]["trained_agent"]
 
             path = CheckpointManager.get_latest_run(config["meta"]["log_dir"])
             set_checkpoints(config, path, checkpoint_type, args.trial)
