@@ -7,6 +7,7 @@ import gym
 from stable_baselines3 import PPO, A2C, DQN, HER, SAC, TD3
 from stable_baselines3.common.base_class import BaseAlgorithm
 
+from baselines_lab3 import utils
 from baselines_lab3.model.schedules import get_schedule
 from baselines_lab3.utils import util
 
@@ -52,6 +53,10 @@ def create_model(config: Dict[str, Any], env: gym.Env, seed: int) -> BaseAlgorit
     else:
         logging.info("Creating new model for {}.".format(name))
         policy_name = policy_config.pop("name")
+        if "activation_fn" in policy_config:
+            policy_config["activation_fn"] = utils.load_class_from_module(
+                policy_config["activation_fn"]
+            )
 
         model = ALGOS[name](
             seed=seed,
