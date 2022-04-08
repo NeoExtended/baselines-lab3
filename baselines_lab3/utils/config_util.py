@@ -1,14 +1,11 @@
 """
 Defines helper functions for reading and writing the lab config file
 """
-import collections
 import copy
-import glob
 import itertools
 import json
 import logging
 import os
-from collections import MutableMapping
 from pathlib import Path
 from typing import Dict, Any, Callable, List, Tuple
 
@@ -123,25 +120,10 @@ def resolve_imports(config):
     """
     complete_config = {}
     for c in config.get("import", []):
-        complete_config = update_dict(complete_config, read_config(c))
+        complete_config = util.update_dict(complete_config, read_config(c))
 
-    config = update_dict(complete_config, config)
+    config = util.update_dict(complete_config, config)
     return config
-
-
-def update_dict(d, u):
-    """
-    Updates dict d to match the parameters of dict u without overwriting lower level keys completely
-    :param d: (dict)
-    :param u: (dict)
-    :return: (dict) The updated dict.
-    """
-    for k, v in u.items():
-        if isinstance(v, collections.abc.Mapping):
-            d[k] = update_dict(d.get(k, {}), v)
-        else:
-            d[k] = v
-    return d
 
 
 def clean_config(config, args):

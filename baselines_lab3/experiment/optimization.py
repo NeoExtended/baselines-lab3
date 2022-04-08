@@ -16,19 +16,7 @@ from baselines_lab3.env import create_environment
 from baselines_lab3.experiment.samplers import Sampler
 from baselines_lab3.model import create_model
 from baselines_lab3.model.callbacks import TensorboardLogger
-from baselines_lab3.utils import send_email
-
-
-def flatten_dict(d, parent_key="", sep="_"):
-    items = []
-    for k, v in d.items():
-        new_key = parent_key + sep + k if parent_key else k
-
-        if isinstance(v, MutableMapping):
-            items.extend(flatten_dict(v, new_key, sep=sep).items())
-        else:
-            items.append((new_key, v))
-    return dict(items)
+from baselines_lab3.utils import send_email, flatten_dict
 
 
 class TrialEvalCallback(EvalCallback):
@@ -225,10 +213,8 @@ class HyperparameterOptimizer:
         def objective(trial):
             trial_config = sampler.sample(trial)
             trial_config["algorithm"]["verbose"] = 0
-            alg_sample, env_sample = sampler.last_sample
-            logging.info(
-                f"Sampled new configuration: algorithm: {alg_sample} env: {env_sample}"
-            )
+            sample = sampler.last_sample
+            logging.info(f"Sampled new configuration: {sample}")
 
             train_env, test_env = self._get_envs(trial_config)
             model = create_model(
@@ -279,8 +265,8 @@ class HyperparameterOptimizer:
                         "Hyperparametersearch new best mean reward {:.4f}".format(
                             self.current_best
                         ),
-                        "Found new parameters with mean of {} and parameters {} {}".format(
-                            self.current_best, alg_sample, env_sample
+                        "Found new parameters with mean of {} and parameters {}".format(
+                            self.current_best, sample
                         ),
                     )
 

@@ -1,6 +1,7 @@
 """
 General helper functions.
 """
+import collections
 import importlib
 import os
 import time
@@ -240,3 +241,49 @@ def wrap_env(env: GymEnv, verbose: int = 0, monitor_wrapper: bool = True) -> Vec
             env = VecTransposeImage(env)
 
     return env
+
+
+def update_dict(d, u):
+    """
+    Updates dict d to match the parameters of dict u without overwriting lower level keys completely
+    :param d: (dict)
+    :param u: (dict)
+    :return: (dict) The updated dict.
+    """
+    for k, v in u.items():
+        if isinstance(v, collections.abc.Mapping):
+            d[k] = update_dict(d.get(k, {}), v)
+        else:
+            d[k] = v
+    return d
+
+
+def flatten_dict(
+    d: collections.MutableMapping, separator: str = ".", parent: str = ""
+) -> Dict:
+    items = []
+
+    for k, v in d.items():
+        new_key = parent + separator + k if parent else k
+
+        if isinstance(v, collections.MutableMapping):
+            items.extend(flatten_dict(v, separator, new_key).items())
+        else:
+            items.append((new_key, v))
+
+    return dict(items)
+
+
+def unflatten_dict(d: collections.MutableMapping, separator: str = "."):
+    result = {}
+
+    for k, v in d.items():
+        parts = k.split(separator)
+
+        current = result
+        for part in parts[:-1]:
+            if part not in current:
+                current[part] = dict()
+            current = current[part]
+        current[parts[-1]] = v
+    return result

@@ -1,5 +1,12 @@
+import collections
 from abc import ABC, abstractmethod
 from copy import deepcopy
+from typing import Tuple, Union, List, Any, Dict
+
+from baselines_lab3.utils.util import update_dict, flatten_dict, unflatten_dict
+import optuna
+
+NAMESPACES = ["algorithm", "env"]
 
 
 class Sampler(ABC):
@@ -10,33 +17,66 @@ class Sampler(ABC):
 
     def __init__(self, config, parameters=None):
         self.config = config
-        self.alg_parameters = {}
-        self.env_parameters = {}
-        self.alg_sample = None
-        self.env_sample = None
+        self.parameters = {}
+        self.last_sample = None
 
-        if config.get("search", None):
+        # Add default parameters
+        for key in parameters:
+            self.add_parameters(key, parameters[key])
+
+        # Add parameters from config file
+        if config.get("search", False):
             search_config = config["search"]
-            if search_config.get("algorithm", None):
-                for sample_name in search_config["algorithm"]:
-                    if sample_name not in self.config["algorithm"]:
-                        self.alg_parameters[sample_name] = self._parse_config(
-                            search_config["algorithm"][sample_name]
-                        )
+            for namespace in NAMESPACES:
+                if search_config.get(namespace, False):
+                    self._extract_search_parameters(
+                        namespace, "", search_config[namespace]
+                    )
 
-            if search_config.get("env", None):
-                for sample_name in search_config["env"]:
-                    if sample_name not in self.config["env"]:
-                        self.env_parameters[sample_name] = self._parse_config(
-                            search_config["env"][sample_name]
-                        )
+            # Remove parameters which are explicitly excluded
+            if search_config.get("exclude", False):
+                exclude = search_config["exclude"]
+                for namespace in NAMESPACES:
+                    self._remove_excluded_parameters(namespace, exclude)
 
-        for key in list(parameters.keys()):
-            if key in self.config["algorithm"]:
-                del parameters[key]
+    def _remove_excluded_parameters(self, namespace: str, exclude: Dict):
+        if exclude.get(namespace, False):
+            for key in exclude[namespace]:
+                self.remove_parameter(namespace, key)
 
-        parameters.update(self.alg_parameters)
-        self.alg_parameters.update(parameters)
+    def _extract_search_parameters(
+        self,
+        namespace: str,
+        parent: str,
+        search_config: collections.MutableMapping,
+        separator: str = ".",
+    ):
+        for key, v in search_config.items():
+            path = parent + separator + key if parent else key
+
+            if isinstance(v, collections.MutableMapping):
+                self._extract_search_parameters(
+                    parent=path,
+                    search_config=v,
+                    separator=separator,
+                    namespace=namespace,
+                )
+
+                if v.get("sample", False):
+                    self.add_parameter(namespace, path, self._parse_config(v))
+
+    def add_parameters(self, namespace: str, parameters: Dict):
+        for k, v in parameters.items():
+            self.add_parameter(namespace, k, v)
+
+    def add_parameter(self, namespace: str, key: str, value: Any):
+        self.parameters[namespace + "." + key] = value
+
+    def get_parameter(self, namespace: str, key: str) -> Any:
+        return self.parameters[namespace + "." + key]
+
+    def remove_parameter(self, namespace: str, key: str):
+        del self.parameters[namespace + "." + key]
 
     def __call__(self, *args, **kwargs):
         return self.sample(**kwargs)
@@ -47,11 +87,14 @@ class Sampler(ABC):
         :param trial: (optuna.trial.Trial) Optuna trial object containing the sampler that should be used to sample the
             parameters.
         """
-        alg_sample = self.sample_parameters(trial, self.alg_parameters, "alg_")
-        env_sample = self.sample_parameters(trial, self.env_parameters, "env_")
-        return self.update_config(alg_sample, env_sample)
+        self.last_sample = self.sample_parameters(trial)
+        sampled_config = deepcopy(self.config)
+        sample = update_dict(sampled_config, unflatten_dict(self.last_sample))
+        transformed = self.transform_sample(sample)
 
-    def sample_parameters(self, trial, parameters, prefix=""):
+        return transformed
+
+    def sample_parameters(self, trial: optuna.Trial):
         """
         Samples parameters for a trial, from a given parameter set.
         :param trial: (optuna.trial.Trial) Optuna trial to sample parameters for.
@@ -61,57 +104,34 @@ class Sampler(ABC):
         :return (dict) Returns a dict containing the sampled parameters
         """
         sample = {}
-        for name, (method, data) in parameters.items():
-            p_name = prefix + name
+        for name, (method, data) in self.parameters.items():
             if method == "categorical":
-                sample[name] = trial.suggest_categorical(p_name, data)
+                sample[name] = trial.suggest_categorical(name, data)
             elif method == "loguniform":
                 low, high = data
-                sample[name] = trial.suggest_loguniform(p_name, low, high)
+                sample[name] = trial.suggest_loguniform(name, low, high)
             elif method == "int":
                 low, high = data
-                sample[name] = trial.suggest_int(p_name, low, high)
+                sample[name] = trial.suggest_int(name, low, high)
             elif method == "uniform":
                 low, high = data
-                sample[name] = trial.suggest_uniform(p_name, low, high)
+                sample[name] = trial.suggest_uniform(name, low, high)
             elif method == "discrete_uniform":
                 low, high, q = data
-                sample[name] = trial.suggest_discrete_uniform(p_name, low, high, q)
+                sample[name] = trial.suggest_discrete_uniform(name, low, high, q)
         return sample
 
-    def update_config(self, alg_sample, env_sample):
-        """
-        Updates the config with a set of sampled parameters. Will not overwrite existing keys.
-        :param alg_sample: (dict) Set of parameters to update the algorithm configuration.
-        :param env_sample: (dict) Set of parameters to update the environment configuration.
-        :return (dict) The updated lab config.
-        """
-        alg_sample, env_sample = self.transform_samples(alg_sample, env_sample)
-        sampled_config = deepcopy(self.config)
-
-        alg_sample.update(self.config["algorithm"])
-        sampled_config["algorithm"].update(alg_sample)
-
-        env_sample.update(self.config["env"])
-        sampled_config["env"].update(env_sample)
-        self.alg_sample, self.env_sample = alg_sample, env_sample
-        return sampled_config
-
-    @property
-    def last_sample(self):
-        return self.alg_sample, self.env_sample
-
     @abstractmethod
-    def transform_samples(self, alg_sample, env_sample):
+    def transform_sample(self, sample: Dict):
         """
-        Method which is called before updating the dictionary. May be used to filter out invalid configurations.
-        :param alg_sample: (dict) Set of parameters to update the algorithm configuration.
-        :param env_sample: (dict) Set of parameters to update the environment configuration.
-        :return (dict, dict) The updated or filtered alg_sample and env_sample
+        Method which is called after updating the dictionary. May be used to filter out invalid configurations.
+        :return (dict) The updated or filtered alg_sample and env_sample
         """
         pass
 
-    def _parse_config(self, parameter_config):
+    def _parse_config(
+        self, parameter_config
+    ) -> Tuple[str, Union[List[Any], Tuple[int, int], Tuple[int, int, int]]]:
         method = parameter_config.get("method")
         if method == "categorical":
             data = parameter_config.get("choices")
@@ -163,7 +183,7 @@ class DQNSampler(Sampler):
     """
 
     def __init__(self, config):
-        parameters = {
+        alg_parameters = {
             "gamma": ("categorical", [0.9, 0.95, 0.98, 0.99, 0.995, 0.999, 0.9999]),
             "prioritized_replay": ("categorical", [True, False]),
             "learning_rate": ("loguniform", (0.5e-5, 0.05)),
@@ -180,22 +200,29 @@ class DQNSampler(Sampler):
             #'prioritized_replay_beta0': ('uniform', (0.2, 0.8)),
             "learning_starts": ("categorical", [1000, 2000, 4000, 8000, 16000]),
         }
+
+        parameters = {"algorithm": alg_parameters}
+
         super().__init__(config, parameters)
 
-    def transform_samples(self, alg_sample, env_sample):
-        return alg_sample, env_sample
+    def transform_sample(self, sample):
+        return sample
 
 
 class PPOSampler(Sampler):
     """
-    # TODO: Update sampler see https://github.com/DLR-RM/rl-baselines3-zoo/blob/master/utils/hyperparams_opt.py
-    # TODO: Enable sampler to sample network architecture and activation functions.
-    # TODO: Update sampler to be able to sample parameters in nested dicts (e.g. alg.policy)
     Sampler for basic PPO parameters.
     """
 
     def __init__(self, config):
-        parameters = {
+
+        self.net_arch = {
+            "small": [64, 64],
+            "medium": [128, 128],
+            "diverging": [128, dict(pi=[128], vf=[128])],
+        }
+
+        alg_params = {
             "batch_size": ("categorical", [32, 64, 128, 256, 512, 1024, 2048]),
             "n_steps": ("categorical", [16, 32, 64, 128, 256, 512, 1024, 2048]),
             "gamma": ("categorical", [0.9, 0.95, 0.98, 0.99, 0.995, 0.999, 0.9999]),
@@ -205,12 +232,37 @@ class PPOSampler(Sampler):
             #            "cliprange_vf": ("categorical", [-1, None]),
             "n_epochs": ("categorical", [1, 5, 10, 20, 30]),
             "gae_lambda": ("categorical", [0.8, 0.9, 0.92, 0.95, 0.98, 0.99, 1.0]),
+            "max_grad_norm": ("categorical", [0.3, 0.5, 0.6, 0.7, 0.8, 0.9, 1, 2, 5]),
+            "policy.ortho_init": ("categorical", [False, True]),
             "vf_coef": ("uniform", (0.0, 1.0)),
+            "policy.activation_fn": (
+                "categorical",
+                [
+                    "torch.nn.Tanh",
+                    "torch.nn.ReLU",
+                    "torch.nn.LeakyReLU",
+                    "torch.nn.SELU",
+                ],
+            ),
+            "network": ("categorical", ["small", "medium", "diverging"]),
         }
+
+        env_params = {"n_envs": ("categorical", [4, 8, 16, 32, 64])}
+
+        parameters = {"algorithm": alg_params, "env": env_params}
+
         super().__init__(config, parameters)
 
-    def transform_samples(self, alg_sample, env_sample):
-        if alg_sample["n_steps"] * env_sample["n_envs"] < alg_sample["batch_size"]:
-            alg_sample["batch_size"] = alg_sample["n_steps"] * env_sample["n_envs"]
+    def transform_sample(self, sample):
+        if (
+            sample["algorithm"]["n_steps"] * sample["env"]["n_envs"]
+            < sample["algorithm"]["batch_size"]
+        ):
+            sample["algorithm"]["batch_size"] = (
+                sample["algorithm"]["n_steps"] * sample["env"]["n_envs"]
+            )
 
-        return alg_sample, env_sample
+        network_type = sample["algorithm"].pop("network")
+        sample["algorithm"]["policy"]["net_arch"] = self.net_arch[network_type]
+
+        return sample
