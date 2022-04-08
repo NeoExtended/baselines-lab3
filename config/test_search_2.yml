@@ -9,6 +9,7 @@ env:
   name: "CartPole-v1"
   frame_stack:
     n_stack: 4
+  multiprocessing: false
   normalize:
     precompute: true
     samples: 10000
@@ -24,12 +25,19 @@ meta:
 search:
   n_timesteps: 12000
   eval_method: "normal"
-  n_trials: 30
+  n_trials: 25
   sampler: "tpe"
   pruner:
     method: "halving"
     min_resource: "auto"
+  algorithm:
+    policy:
+      activation_fn:
+        sample: true
+        method: "categorical"
+        choices: [ torch.nn.SELU, torch.nn.ReLU ]
   env:
     n_envs:
+      sample: true
       method: "categorical"
-      choices: [4, 8, 16]
+      choices: [ 2, 4, 8 ]
