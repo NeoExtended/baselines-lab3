@@ -281,7 +281,9 @@ class TrainSession(Session):
                 trial_dir = os.path.join(self.log, "trial_{}".format(i))
                 os.mkdir(trial_dir)
                 util.set_log_directory(trial_dir)
-                config_util.save_config(self.config, trial_dir)
+                config_util.save_config(
+                    self.config, os.path.join(trial_dir, "config.yml")
+                )
 
                 self._run_trial()
 
