@@ -99,6 +99,8 @@ def create_environment(
     record_images = config["meta"].get("record_images", False)
     config = copy.deepcopy(config["env"])
 
+    config.pop("evaluation")  # Always ignore evaluation specific configuration.
+
     env_id = config.pop("name")
     n_envs = config.pop("n_envs", 1)
     normalize = config.pop("normalize", None)
