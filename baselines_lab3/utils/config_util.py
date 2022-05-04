@@ -253,13 +253,28 @@ def save_config(config, path):
     file.close()
 
 
+def seed_from_config(config, increment=0, max_bytes=4):
+    """
+    Cretaes a new generated seed for the given config. Creates a random seed if config["meta"]["seed"] is None.
+    :param max_bytes:
+    :param config:
+    :param increment: Number that is added to the seed in config.
+    :return:
+    """
+    seed = config["meta"].get("seed", None)
+    if seed is not None:
+        seed = seed + increment
+
+    return seeding.create_seed(max_bytes=max_bytes, a=seed)
+
+
 def extend_meta_data(config):
     """
     Extends the meta-data dictionary of the file to save additional information at training time.
     :param config: (dict) The config dictionary.
     :return: (dict) The updated config dictionary.
     """
-    seed = seeding.create_seed(max_bytes=4, a=config["meta"].get("seed", None))
+    seed = seed_from_config(config)
 
     extended_info = {
         "timestamp": util.get_timestamp(),
