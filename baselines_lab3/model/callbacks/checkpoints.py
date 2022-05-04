@@ -117,7 +117,7 @@ class CheckpointManager(CallbackList):
 
         self.last_models = []
         self.wrappers = []
-        self.tb_log = tb_log
+        self.tb_log = tb_log  # TODO: This does nothing
 
         norm_wrapper = None
         if config:

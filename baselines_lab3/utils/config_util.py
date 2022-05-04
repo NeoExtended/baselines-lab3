@@ -259,9 +259,11 @@ def extend_meta_data(config):
     :param config: (dict) The config dictionary.
     :return: (dict) The updated config dictionary.
     """
+    seed = seeding.create_seed(max_bytes=4, a=config["meta"].get("seed", None))
+
     extended_info = {
         "timestamp": util.get_timestamp(),
-        "seed": config["meta"].get("seed", seeding.create_seed(max_bytes=4)),
+        "generated_seed": seed,
     }
     config["meta"].update(extended_info)
     return config

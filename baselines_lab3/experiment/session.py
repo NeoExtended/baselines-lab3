@@ -121,14 +121,14 @@ class ReplaySession(Session):
 
         self.env = create_environment(
             config=config,
-            seed=self.config["meta"]["seed"],
+            seed=self.config["meta"]["generated_seed"],
             log_dir=self.data_path,
             video_path=self.data_path if args.obs_video else None,
             evaluation=args.evaluate,
         )
 
         self.agent = create_model(
-            config["algorithm"], self.env, seed=self.config["meta"]["seed"]
+            config["algorithm"], self.env, seed=self.config["meta"]["generated_seed"]
         )
         other_agents = self._setup_additional_agents(config, args)
         obs = self.env.reset()
@@ -169,7 +169,9 @@ class ReplaySession(Session):
                     config_util.set_checkpoints(cfg, agent, args.type, args.trial)
                     other_agents.append(
                         create_model(
-                            cfg["algorithm"], self.env, seed=self.config["meta"]["seed"]
+                            cfg["algorithm"],
+                            self.env,
+                            seed=self.config["meta"]["generated_seed"],
                         )
                     )
         return other_agents
@@ -233,7 +235,7 @@ class TrainSession(Session):
     def _setup_session(self):
         self.env = create_environment(
             config=self.config,
-            seed=self.config["meta"]["seed"],
+            seed=self.config["meta"]["generated_seed"],
             log_dir=util.get_log_directory(),
         )
         if self.record_video:
@@ -242,7 +244,9 @@ class TrainSession(Session):
             )
 
         self.agent = create_model(
-            self.config["algorithm"], self.env, seed=self.config["meta"]["seed"]
+            self.config["algorithm"],
+            self.env,
+            seed=self.config["meta"]["generated_seed"],
         )
 
         save_interval = self.config["meta"].get("save_interval", 250000)
@@ -298,7 +302,9 @@ class TrainSession(Session):
             env_config = copy.deepcopy(self.config)
             env_config["env"]["n_envs"] = recorder_config.pop("n_envs", 4)
             self.recording_env = create_environment(
-                config=env_config, seed=self.config["meta"]["seed"], log_dir=None,
+                config=env_config,
+                seed=self.config["meta"]["generated_seed"],
+                log_dir=None,
             )
             callbacks.append(
                 EveryNTimesteps(

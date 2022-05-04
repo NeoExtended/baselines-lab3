@@ -86,7 +86,7 @@ class HyperparameterOptimizer:
         self.n_timesteps = search_config.get("n_timesteps", 10000)
         self.n_trials = search_config.get("n_trials", 10)
         self.n_jobs = search_config.get("n_jobs", 1)
-        self.seed = config["meta"]["seed"]
+        self.seed = config["meta"]["generated_seed"]
         self.sampler_method = search_config.get("sampler", "random")
         self.pruner_method = search_config.get("pruner", "median")
         self.eval_method = search_config.get("eval_method", "normal")
@@ -191,9 +191,7 @@ class HyperparameterOptimizer:
             self.train_env.close()
             del self.train_env
 
-        self.train_env = create_environment(
-            config, config["meta"]["seed"], log_dir=self.log_dir,
-        )
+        self.train_env = create_environment(config, self.seed, log_dir=self.log_dir,)
 
         test_config = deepcopy(config)
         test_env_config = test_config["env"]
@@ -217,9 +215,7 @@ class HyperparameterOptimizer:
             logging.info(f"Sampled new configuration: {sample}")
 
             train_env, test_env = self._get_envs(trial_config)
-            model = create_model(
-                trial_config["algorithm"], train_env, trial_config["meta"]["seed"]
-            )
+            model = create_model(trial_config["algorithm"], train_env, self.seed)
             self.logger.config = trial_config
 
             optuna_eval_freq = int(self.n_timesteps / self.n_evaluations)
