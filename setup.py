@@ -17,11 +17,9 @@ setup(
         "torch>=1.8.1",
         "pyyaml",
         "matplotlib",
+        "slurminade",
     ],
-    extras_require={
-        "visualization": ["plotly", "scikit-learn"],
-        "distributed": ["slurminade"],
-    },
+    extras_require={"visualization": ["plotly", "scikit-learn"],},
     include_package_data=True,
     package_data={"": ["mapdata/*.csv"]},
 )

@@ -3,7 +3,7 @@ import sys
 import os
 from pathlib import Path
 
-from baselines_lab3.experiment import Session
+from baselines_lab3.experiment.session import Session
 
 sys.path.insert(0, os.path.dirname(os.getcwd()))
 

@@ -3,6 +3,9 @@ from argparse import Namespace
 from pathlib import Path
 from typing import Dict, List
 
+import slurminade
+
+from baselines_lab3.experiment.slurm import run_slurm_session
 from baselines_lab3.experiment.session import Session
 from baselines_lab3.utils import send_email, config_util, util
 
@@ -61,10 +64,6 @@ class Scheduler:
         logging.info("Finished execution of config {}".format(config))
 
     def _schedule_distributed(self, config: Dict, log_dir: Path):
-        # Import here to avoid mandatory slurminade dependency
-        import slurminade
-        from baselines_lab3.experiment.slurm import run_slurm_session
-
         if config["meta"].get("slurm", False):
             slurminade.update_default_configuration(**config["meta"].get("slurm"))
 
