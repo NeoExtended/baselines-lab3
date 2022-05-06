@@ -18,7 +18,10 @@ setup(
         "pyyaml",
         "matplotlib",
     ],
-    extras_require={"visualization": ["plotly", "scikit-learn"]},
+    extras_require={
+        "visualization": ["plotly", "scikit-learn"],
+        "distributed": ["slurminade"],
+    },
     include_package_data=True,
     package_data={"": ["mapdata/*.csv"]},
 )
