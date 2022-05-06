@@ -6,6 +6,7 @@ import itertools
 import json
 import logging
 import os
+from argparse import Namespace
 from pathlib import Path
 from typing import Dict, Any, Callable, List, Tuple
 
@@ -15,7 +16,7 @@ from gym.utils import seeding
 from baselines_lab3.utils import util
 
 
-def parse_config_args(config_args, args):
+def parse_config_args(config_args: List[str], args: Namespace):
     """
     Parses the config string the user provides to the lab and returns the according config dictionaries.
     :param config_args:
@@ -30,16 +31,16 @@ def parse_config_args(config_args, args):
         if path.is_dir():
             files = path.glob("**/*.yml")
             for file in files:
-                configs.extend(create_tests(get_config(str(file), args)))
+                configs.extend(create_tests(get_config(file, args)))
         else:
-            configs.extend(create_tests(get_config(config, args)))
+            configs.extend(create_tests(get_config(path, args)))
     return configs
 
 
-def get_config(config_file, args):
+def get_config(config_file: Path, args: Namespace) -> Dict:
     """
     Reads the lab config from a given file and configures it for use with to the current lab mode.
-    :param config_file: (str) Path to the config file.
+    :param config_file: (Path) Path to the config file.
     :param args: (dict) parsed args dict
     :return: (dict) The parsed config file as dictionary.
     """
@@ -50,7 +51,7 @@ def get_config(config_file, args):
     return config
 
 
-def create_default_values(config):
+def create_default_values(config: Dict) -> Dict:
     def set_default(cfg, order, value):
         return util.set_nested_value(cfg, order, value.get("default_value"))
 
@@ -112,7 +113,7 @@ def create_tests(config: Dict[str, Any]):
         return list(itertools.chain.from_iterable(config_files))  # Unpack nested lists
 
 
-def resolve_imports(config):
+def resolve_imports(config: Dict) -> Dict:
     """
     Resolves all imports, updating the values in the current config. Existing keys will not be overwritten!
     :param config: (dict) Lab config
@@ -120,13 +121,13 @@ def resolve_imports(config):
     """
     complete_config = {}
     for c in config.get("import", []):
-        complete_config = util.update_dict(complete_config, read_config(c))
+        complete_config = util.update_dict(complete_config, read_config(Path(c)))
 
     config = util.update_dict(complete_config, config)
     return config
 
 
-def clean_config(config, args):
+def clean_config(config: Dict, args: Namespace) -> Dict:
     """
     Deletes or modifies keys from the config which are not compatible with the current lab mode.
     :param config: (dict) The config dictionary
@@ -218,13 +219,13 @@ def set_checkpoints(config, path, type, trial=-1):
         config["env"]["normalize"]["trained_agent"] = checkpoint["normalization"]
 
 
-def read_config(config_file):
+def read_config(config_file: Path) -> Dict:
     """
     Reads a config file from disc. The file must follow JSON or YAML standard.
-    :param config_file: (str) Path to the config file.
+    :param config_file: (Path) Path to the config file.
     :return: (dict) A dict with the contents of the file.
     """
-    file = open(config_file, "r")
+    file = config_file.open("r")
     ext = os.path.splitext(config_file)[-1]
 
     if ext == ".json":
@@ -238,14 +239,14 @@ def read_config(config_file):
     return config
 
 
-def save_config(config, path):
+def save_config(config: Dict, path: Path):
     """
     Saves a given lab configuration to a file.
     :param config: (dict) The lab configuration.
-    :param path: (str) Desired file location.
+    :param path: (Path) Desired file location.
     """
     ext = os.path.splitext(path)[-1]
-    file = open(path, "w")
+    file = path.open("w")
     if ext == ".json":
         json.dump(config, file, indent=2, sort_keys=True)
     elif ext == ".yml":
@@ -268,7 +269,7 @@ def seed_from_config(config, increment=0, max_bytes=4):
     return seeding.create_seed(max_bytes=max_bytes, a=seed)
 
 
-def extend_meta_data(config):
+def extend_meta_data(config: Dict) -> Dict:
     """
     Extends the meta-data dictionary of the file to save additional information at training time.
     :param config: (dict) The config dictionary.

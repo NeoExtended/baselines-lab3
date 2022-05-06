@@ -66,7 +66,7 @@ class TableGenerator(ABC):
     ):
         rows = []
         for file in self.files:
-            config = config_util.read_config(str(file.joinpath("config.yml")))
+            config = config_util.read_config(file.joinpath("config.yml"))
             row = self._process_config(config)
             info = TrainingInformation(str(file))
             info.log_key_points(drop_level=drop_level, max_step=max_step)
