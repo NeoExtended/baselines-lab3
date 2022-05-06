@@ -1,6 +1,7 @@
 import logging
+from argparse import Namespace
 from pathlib import Path
-from typing import Dict
+from typing import Dict, List
 
 from baselines_lab3.experiment.session import Session
 from baselines_lab3.utils import send_email, config_util, util
@@ -14,15 +15,15 @@ class Scheduler:
     :param args: (namespace) Lab arguments.
     """
 
-    def __init__(self, configs, args):
+    def __init__(self, configs: List[Dict], args: Namespace):
         self.configs = configs
         self.args = args
 
-    def _maybe_send_mail(self, title, text):
+    def _maybe_send_mail(self, title: str, text: str):
         if self.args.mail:
             send_email(self.args.mail, title, text)
 
-    def _create_log_dir(self, config):
+    def _create_log_dir(self, config: Dict):
         log_location = config["meta"].get("log_dir", None)
         log_dir = util.create_log_directory(log_location)
         config["meta"]["timestamp"] = util.get_timestamp()
@@ -54,12 +55,12 @@ class Scheduler:
 
                 self._schedule_trial(config, trial_dir)
 
-    def _schedule_local(self, config, log_dir: Path):
+    def _schedule_local(self, config: Dict, log_dir: Path):
         session = Session.create_session(config, log_dir)
         session.run()
         logging.info("Finished execution of config {}".format(config))
 
-    def _schedule_distributed(self, config, log_dir: Path):
+    def _schedule_distributed(self, config: Dict, log_dir: Path):
         # Import here to avoid mandatory slurminade dependency
         import slurminade
         from baselines_lab3.experiment.slurm import run_slurm_session
@@ -70,7 +71,7 @@ class Scheduler:
         run_slurm_session.local(str(log_dir))
         logging.info("Scheduled configuration {}".format(config))
 
-    def _schedule_trial(self, config, log_dir: Path):
+    def _schedule_trial(self, config: Dict, log_dir: Path):
         if config["args"]["distributed"]:
             self._schedule_distributed(config, log_dir)
         else:
