@@ -128,6 +128,11 @@ def parse_args(args):
         action="store_true",
         help="Weather or not to suppress errors when executing multiple configs.",
     )
+    parser.add_argument(
+        "--distributed",
+        action="store_true",
+        help="If set, sessions will be distributed using slurm.",
+    )
     return parser.parse_args(args=args)
 
 

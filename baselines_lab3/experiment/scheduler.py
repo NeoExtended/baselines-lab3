@@ -54,10 +54,27 @@ class Scheduler:
 
                 self.schedule_trial(config, trial_dir)
 
-    def schedule_trial(self, config, log_dir: Path):
+    def _schedule_local(self, config, log_dir: Path):
         session = Session.create_session(config, log_dir)
         session.run()
         logging.info("Finished execution of config {}".format(config))
+
+    def _schedule_distributed(self, config, log_dir: Path):
+        # Import here to avoid mandatory slurminade dependency
+        import slurminade
+        from baselines_lab3.experiment.slurm import run_slurm_session
+
+        if config["meta"].get("slurm", False):
+            slurminade.update_default_configuration(**config["meta"].get("slurm"))
+
+        run_slurm_session.local(str(log_dir))
+        logging.info("Scheduled configuration {}".format(config))
+
+    def schedule_trial(self, config, log_dir: Path):
+        if config["args"]["distributed"]:
+            self._schedule_distributed(config, log_dir)
+        else:
+            self._schedule_local(config, log_dir)
 
     def run(self):
         for config in self.configs:
