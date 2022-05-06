@@ -18,6 +18,6 @@ def run_slurm_session(config_path):
     config = config_util.read_config(config_path / "config.yml")
     logging.getLogger().setLevel(config["args"]["verbose"])
 
-    session = Session.create_session(config, config_path.parent)
+    session = Session.create_session(config, config_path)
     session.run()
     logging.info("Finished execution of config {}".format(config))
