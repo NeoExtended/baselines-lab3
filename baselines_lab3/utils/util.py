@@ -7,7 +7,7 @@ from datetime import datetime
 from pathlib import Path
 from subprocess import Popen, PIPE
 import logging
-from typing import Type, Any, Optional, Dict, List
+from typing import Type, Any, Optional, Dict, List, Union
 from collections import abc, MutableMapping
 
 import numpy as np
@@ -77,7 +77,7 @@ def get_timestamp(pattern: str = TIMESTAMP_FORMAT) -> str:
     return now.strftime(pattern)
 
 
-def create_log_directory(root: Optional[Path]) -> Path:
+def create_log_directory(root: Optional[Union[Path, str]]) -> Path:
     """
     Creates a global log directory at a given place. The directory will be named with a current timestamp.
     :param root: (Path) Parent directory for the log directory. Will be created if it does not exist.
@@ -85,6 +85,8 @@ def create_log_directory(root: Optional[Path]) -> Path:
     """
     if not root:
         root = Path(".")
+    if isinstance(root, str):
+        root = Path(root)
 
     path = root / get_timestamp()
     path.mkdir(parents=True)

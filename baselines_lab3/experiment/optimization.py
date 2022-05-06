@@ -215,7 +215,9 @@ class HyperparameterOptimizer:
             logging.info(f"Sampled new configuration: {sample}")
 
             train_env, test_env = self._get_envs(trial_config)
-            model = create_model(trial_config["algorithm"], train_env, self.seed)
+            model = create_model(
+                trial_config["algorithm"], train_env, self.log_dir, self.seed
+            )
             self.logger.config = trial_config
 
             optuna_eval_freq = int(self.n_timesteps / self.n_evaluations)

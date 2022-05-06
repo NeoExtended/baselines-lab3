@@ -4,16 +4,14 @@ import logging
 import os
 from abc import ABC, abstractmethod
 from pathlib import Path
+from types import SimpleNamespace
+from typing import Dict
 
 import optuna
 import numpy as np
 import matplotlib.pyplot as plt
 from stable_baselines3.common.vec_env import VecVideoRecorder
-from stable_baselines3.common.callbacks import (
-    EvalCallback,
-    CheckpointCallback,
-    EveryNTimesteps,
-)
+from stable_baselines3.common.callbacks import EveryNTimesteps
 import yaml
 
 import baselines_lab3.utils.env_util
@@ -61,13 +59,12 @@ class Session(ABC):
     The main experiment control unit. Creates the environment and model from the lab configuration, runs the experiment
         and controls model saving.
     :param config: (dict) The lab configuration.
-    :param args: (dict) Parsed additional command line arguments.
+    :param log_dir: (Path) Path to the logging directory
     """
 
-    def __init__(self, config, args):
+    def __init__(self, config: Dict, log_dir: Path):
         self.config = config
-        self.log = None
-        self.lab_mode = args.lab_mode
+        self.log = log_dir
 
     @abstractmethod
     def run(self):
@@ -77,22 +74,17 @@ class Session(ABC):
         pass
 
     @staticmethod
-    def create_session(config, args):
-        if args.lab_mode == "train":
-            return TrainSession(config, args)
-        elif args.lab_mode == "enjoy":
-            return ReplaySession(config, args)
-        elif args.lab_mode == "search":
-            return SearchSession(config, args)
+    def create_session(config: Dict, log_dir: Path):
+        lab_mode = config["args"].get("lab_mode", "train")
+
+        if lab_mode == "train":
+            return TrainSession(config, log_dir)
+        elif lab_mode == "enjoy":
+            return ReplaySession(config, log_dir)
+        elif lab_mode == "search":
+            return SearchSession(config, log_dir)
         else:
             raise ValueError("Unknown lab mode!")
-
-    def _create_log_dir(self):
-        log_dir = self.config["meta"].get("log_dir", None)
-        self.log = util.create_log_directory(log_dir)
-        if self.log:
-            self.config["meta"]["timestamp"] = util.get_timestamp()
-            config_util.save_config(self.config, os.path.join(self.log, "config.yml"))
 
     def _plot(self, log_dir):
         file_format = "pdf"
@@ -110,9 +102,10 @@ class ReplaySession(Session):
     Control unit for a replay session (enjoy lab mode - includes model evaluation).
     """
 
-    def __init__(self, config, args):
-        Session.__init__(self, config, args)
+    def __init__(self, config: Dict, log_dir: Path):
+        super(ReplaySession, self).__init__(config, log_dir)
 
+        args = SimpleNamespace(**config["args"])
         if args.checkpoint_path:
             self.data_path = args.checkpoint_path
         else:
@@ -129,7 +122,10 @@ class ReplaySession(Session):
         )
 
         self.agent = create_model(
-            config["algorithm"], self.env, seed=self.config["meta"]["generated_seed"]
+            config["algorithm"],
+            self.env,
+            self.log,
+            seed=self.config["meta"]["generated_seed"],
         )
         other_agents = self._setup_additional_agents(config, args)
         obs = self.env.reset()
@@ -172,6 +168,7 @@ class ReplaySession(Session):
                         create_model(
                             cfg["algorithm"],
                             self.env,
+                            self.log,
                             seed=self.config["meta"]["generated_seed"],
                         )
                     )
@@ -223,21 +220,21 @@ class TrainSession(Session):
     Control unit for the training lab mode.
     """
 
-    def __init__(self, config, args):
-        Session.__init__(self, config, args)
-        self._create_log_dir()
+    def __init__(self, config: Dict, log_dir: Path):
+        super(TrainSession, self).__init__(config, log_dir)
         self.env = None
         self.recording_env = None
         self.agent = None
         self.saver = None
-        self.record_video = args.video
-        self.video_format = args.video_format
+
+        self.record_video = config["args"].get("video")
+        self.video_format = config["args"].get("video_format")
 
     def _setup_session(self):
         self.env = create_environment(
             config=self.config,
             seed=self.config["meta"]["generated_seed"],
-            log_dir=util.get_log_directory(),
+            log_dir=str(self.log),
         )
         if self.record_video:
             self._setup_recorder(
@@ -247,6 +244,7 @@ class TrainSession(Session):
         self.agent = create_model(
             self.config["algorithm"],
             self.env,
+            log_dir=self.log,
             seed=self.config["meta"]["generated_seed"],
         )
 
@@ -270,34 +268,15 @@ class TrainSession(Session):
         self.env = VecImageRecorder(self.env, path, format=format, unvec=True)
 
     def run(self):
-        n_trials = self.config["meta"].get("n_trials", 1)
-
-        if n_trials == 1:
-            self._run_trial()
-        else:
-            for i in range(n_trials):
-                self.config["meta"]["generated_seed"] = config_util.seed_from_config(
-                    self.config, increment=i
-                )
-                trial_dir = os.path.join(self.log, "trial_{}".format(i))
-                os.mkdir(trial_dir)
-                util.set_log_directory(trial_dir)
-                config_util.save_config(
-                    self.config, os.path.join(trial_dir, "config.yml")
-                )
-
-                self._run_trial()
-
-        if self.config["meta"].get("plot", False):
-            self._plot(self.log)
-
-    def _run_trial(self):
         self._setup_session()
         self._run_experiment()
         del self.env
         del self.recording_env
         del self.agent
         del self.saver
+
+        if self.config["meta"].get("plot", False):
+            self._plot(self.log)
 
     def _run_experiment(self):
         callbacks = [self.saver, TensorboardLogger(config=self.config)]
@@ -335,17 +314,13 @@ class SearchSession(Session):
     Control unit for the search lab mode
     """
 
-    def __init__(self, config, args):
-        Session.__init__(self, config, args)
+    def __init__(self, config: Dict, log_dir: Path):
+        super(SearchSession, self).__init__(config, log_dir)
 
-        if config["search"].get("resume", False):
-            self.log = config["search"]["resume"]
-            util.set_log_directory(self.log)
-        else:
-            self._create_log_dir()
-
-        self.optimizer = HyperparameterOptimizer(config, self.log, args.mail)
-        self.plot = args.plot
+        self.optimizer = HyperparameterOptimizer(
+            config, self.log, config["args"].get("mail")
+        )
+        self.plot = config["args"].get("plot")
 
     def run(self):
         study = self.optimizer.optimize()
@@ -369,18 +344,9 @@ class SearchSession(Session):
             )
         self._save_config(study.best_trial, "best_trial.yml")
 
-    def _save_config(self, trial, name):
-        alg_params = {}
-        env_params = {}
-        for key, value in trial.params.items():
-            if key.startswith("env_"):
-                env_params[key[4:]] = value
-            elif key.startswith("alg_"):
-                alg_params[key[4:]] = value
-        sampled_config = Sampler.create_sampler(self.config).update_config(
-            alg_params, env_params
-        )
-        config_util.save_config(sampled_config, os.path.join(self.log, name))
+    def _save_config(self, trial: optuna.Trial, name: str):
+        sample = Sampler.create_sampler(self.config).sample(trial)
+        config_util.save_config(sample, self.log / name)
 
     def _find_promising_trials(self, study):
         promising = list()

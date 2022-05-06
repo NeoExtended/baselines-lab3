@@ -1,6 +1,7 @@
 import copy
 import logging
-from typing import Any, Dict
+from pathlib import Path
+from typing import Any, Dict, Optional
 
 import gym
 
@@ -15,9 +16,12 @@ from baselines_lab3.utils import util
 ALGOS = {"a2c": A2C, "dqn": DQN, "her": HER, "sac": SAC, "ppo": PPO, "td3": TD3}
 
 
-def create_model(config: Dict[str, Any], env: gym.Env, seed: int) -> BaseAlgorithm:
+def create_model(
+    config: Dict[str, Any], env: gym.Env, log_dir: Optional[Path], seed: int
+) -> BaseAlgorithm:
     """
     Creates a stable-baselines model according to the given lab configuration.
+    :param log_dir: (Path) The current logging directory. Will be used to write tensorboard logs.
     :param config: (dict) The current lab model configuration (from config['algorithm']).
     :param env: (gym.Env) The environment to learn from.
     :param seed: The current seed for the model prngs.
@@ -28,8 +32,6 @@ def create_model(config: Dict[str, Any], env: gym.Env, seed: int) -> BaseAlgorit
     tlog = config.pop("tensorboard_log", None)
     verbose = config.pop("verbose", 0)
     policy_config = config.pop("policy")
-
-    tlog_location = _get_tensorflow_log_location(tlog)
 
     # Create lr schedules if supported
     for key in ["learning_rate", "clip_range", "clip_range_vf"]:
@@ -45,7 +47,7 @@ def create_model(config: Dict[str, Any], env: gym.Env, seed: int) -> BaseAlgorit
             config["trained_agent"],
             seed=seed,
             env=env,
-            tensorboard_log=tlog_location,
+            tensorboard_log=str(log_dir),
             verbose=verbose,
             **config
         )
@@ -63,7 +65,7 @@ def create_model(config: Dict[str, Any], env: gym.Env, seed: int) -> BaseAlgorit
             policy=policy_name,
             policy_kwargs=policy_config,
             env=env,
-            tensorboard_log=tlog_location,
+            tensorboard_log=str(log_dir),
             verbose=verbose,
             **config
         )
@@ -71,17 +73,3 @@ def create_model(config: Dict[str, Any], env: gym.Env, seed: int) -> BaseAlgorit
     logging.info("Network Architecture:")
     logging.info(model.policy)
     return model
-
-
-def _get_tensorflow_log_location(tlog):
-    """
-    Returns the tensorflow log directory.
-    :param tlog: The tensorboard-log parameter from config['algorithm']['tensorboard_log']
-    """
-    if tlog:
-        if isinstance(tlog, bool):
-            return util.get_log_directory()
-        else:
-            return tlog.get("path", util.get_log_directory())
-    else:
-        return None

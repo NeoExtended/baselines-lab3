@@ -48,6 +48,7 @@ def get_config(config_file: Path, args: Namespace) -> Dict:
     config = resolve_imports(config)
     config = extend_meta_data(config)
     config = clean_config(config, args)
+    config["args"] = vars(args)
     return config
 
 
