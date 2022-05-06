@@ -1,4 +1,5 @@
 import logging
+import time
 from argparse import Namespace
 from pathlib import Path
 from typing import Dict, List
@@ -77,6 +78,8 @@ class Scheduler:
 
     def _schedule_trial(self, config: Dict, log_dir: Path):
         if config["args"]["distributed"]:
+            # Sleep in the distributed case, as folders/config files may need some time before they are readable
+            time.sleep(2)
             self._schedule_distributed(config, log_dir)
         else:
             self._schedule_local(config, log_dir)
