@@ -17,6 +17,7 @@ from stable_baselines3.common.callbacks import (
 )
 from stable_baselines3.common.vec_env import VecNormalize, VecEnv
 
+from baselines_lab3.utils import env_util
 from baselines_lab3 import utils
 from baselines_lab3.env import create_environment
 from baselines_lab3.utils import util
@@ -124,7 +125,7 @@ class CheckpointManager(CallbackList):
             normalization = config["env"].get("normalize", False)
 
             if normalization:
-                norm_wrapper = util.unwrap_vec_env(training_env, VecNormalize)
+                norm_wrapper = env_util.unwrap_vec_env(training_env, VecNormalize)
 
             # The eval callback will automatically synchronize VecNormalize wrappers if they exist
             if keep_best:
@@ -193,7 +194,7 @@ class CheckpointManager(CallbackList):
         # if test_env_config.get("log_attributes", None):
         #     del test_env_config["log_attributes"]
 
-        return utils.wrap_env(
+        return env_util.wrap_env(
             create_environment(test_config, create_seed()), monitor_wrapper=True
         )
 

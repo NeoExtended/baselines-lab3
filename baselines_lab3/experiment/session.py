@@ -16,6 +16,7 @@ from stable_baselines3.common.callbacks import (
 )
 import yaml
 
+import baselines_lab3.utils.env_util
 from baselines_lab3.env import create_environment
 from baselines_lab3.env.wrappers import (
     EvaluationWrapper,
@@ -140,7 +141,7 @@ class ReplaySession(Session):
         self.evaluate = args.evaluate
         if args.evaluate:
             self.num_episodes = args.evaluate
-            self.eval_wrapper = util.unwrap_env(
+            self.eval_wrapper = baselines_lab3.utils.env_util.unwrap_env(
                 self.env, VecEvaluationWrapper, EvaluationWrapper
             )
             self.eval_wrapper.aggregator.path = self.data_path
