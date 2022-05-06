@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Any, Dict, Optional
 
 import gym
+import torch.cuda
 
 from stable_baselines3 import PPO, A2C, DQN, HER, SAC, TD3
 from stable_baselines3.common.base_class import BaseAlgorithm
@@ -32,6 +33,8 @@ def create_model(
     tlog = config.pop("tensorboard_log", None)
     verbose = config.pop("verbose", 0)
     policy_config = config.pop("policy")
+
+    config["device"] = get_device(config)
 
     # Create lr schedules if supported
     for key in ["learning_rate", "clip_range", "clip_range_vf"]:
@@ -73,3 +76,14 @@ def create_model(
     logging.info("Network Architecture:")
     logging.info(model.policy)
     return model
+
+
+def get_device(config):
+    requested_device = config.get("device", "auto")
+
+    # If the available cuda version is too old, request cpu device
+    if requested_device != "cpu" and torch.cuda.is_available():
+        major, minor = torch.cuda.get_device_capability()
+        if major < 5:
+            return "cpu"
+    return requested_device
