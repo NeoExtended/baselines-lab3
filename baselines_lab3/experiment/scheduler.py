@@ -68,7 +68,7 @@ class Scheduler:
         if config["meta"].get("slurm", False):
             slurminade.update_default_configuration(**config["meta"].get("slurm"))
 
-        run_slurm_session.distribute(config, str(log_dir))
+        run_slurm_session.distribute(str(log_dir))
         logging.info("Scheduled configuration {}".format(config))
 
     def _schedule_trial(self, config: Dict, log_dir: Path):
