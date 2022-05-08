@@ -4,13 +4,11 @@ from argparse import Namespace
 from pathlib import Path
 from typing import Dict, List
 
-import simple_slurm
 import slurminade
 
-from baselines_lab3.experiment.slurm import run_slurm_session
 from baselines_lab3.experiment.session import Session
+from baselines_lab3.experiment.slurm import run_slurm_session
 from baselines_lab3.utils import send_email, config_util, util
-from slurminade.conf import _get_conf
 
 
 class Scheduler:
@@ -70,9 +68,6 @@ class Scheduler:
         if config["meta"].get("slurm", False):
             slurminade.update_default_configuration(**config["meta"].get("slurm"))
 
-        # TODO: Remove this weird patch once slurmify allows live argument updates.
-        conf = _get_conf({})
-        run_slurm_session.slurm = simple_slurm.Slurm(**conf)
         run_slurm_session.distribute(config, str(log_dir))
         logging.info("Scheduled configuration {}".format(config))
 
