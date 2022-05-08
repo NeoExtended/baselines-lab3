@@ -13,9 +13,9 @@ from baselines_lab3.utils import config_util
 
 
 @slurminade.slurmify()
-def run_slurm_session(config_path):
+def run_slurm_session(config, config_path):
     config_path = Path(config_path)
-    config = config_util.read_config(config_path / "config.yml")
+    # config = config_util.read_config(config_path / "config.yml")
     logging.getLogger().setLevel(config["args"]["verbose"])
 
     session = Session.create_session(config, config_path)
