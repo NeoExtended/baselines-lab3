@@ -12,7 +12,6 @@ from collections import abc
 
 import numpy as np
 
-log_dir: Path = Path(".")
 TIMESTAMP_FORMAT = "%Y_%m_%d_%H%M%S"
 
 
@@ -90,28 +89,7 @@ def create_log_directory(root: Optional[Union[Path, str]]) -> Path:
 
     path = root / get_timestamp()
     path.mkdir(parents=True)
-    return set_log_directory(path)
-
-
-def set_log_directory(log_directory: Path) -> Path:
-    """
-    Sets the global log directory.
-    """
-    if log_directory.exists():
-        global log_dir
-        log_dir = log_directory
-
-        return log_directory
-    else:
-        raise FileNotFoundError(f"The log directory {log_directory} does not exist!")
-
-
-def get_log_directory() -> Path:
-    """
-    Returns the current log directory. May be None if create_log_directory() has not been called before.
-    """
-    global log_dir
-    return log_dir
+    return path
 
 
 def safe_mean(arr):

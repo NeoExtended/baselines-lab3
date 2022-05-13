@@ -238,7 +238,7 @@ class TrainSession(Session):
         )
         if self.record_video:
             self._setup_recorder(
-                os.path.join(util.get_log_directory(), "videos"), self.video_format
+                os.path.join(str(self.log), "videos"), self.video_format
             )
 
         self.agent = create_model(
@@ -254,7 +254,7 @@ class TrainSession(Session):
         n_eval_episodes = self.config["meta"].get("n_eval_episodes", 32)
 
         self.saver = CheckpointManager(
-            model_dir=os.path.join(util.get_log_directory(), "checkpoints"),
+            model_dir=os.path.join(str(self.log), "checkpoints"),
             save_interval=save_interval,
             n_keep=n_keep,
             keep_best=keep_best,

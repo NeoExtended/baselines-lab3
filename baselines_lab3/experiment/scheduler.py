@@ -54,7 +54,6 @@ class Scheduler:
                 )
                 trial_dir = log_dir / f"trial_{trial}"
                 trial_dir.mkdir()
-                util.set_log_directory(trial_dir)
                 config_util.save_config(config, trial_dir / "config.yml")
 
                 self._schedule_trial(config, trial_dir)
