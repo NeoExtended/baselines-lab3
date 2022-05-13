@@ -1,6 +1,5 @@
 import logging
 import os
-from collections import MutableMapping
 from copy import deepcopy
 from typing import Optional
 

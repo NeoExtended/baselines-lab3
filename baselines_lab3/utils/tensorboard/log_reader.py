@@ -1,44 +1,67 @@
 import logging
+import sys
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Tuple, List, Optional, Dict, Any
 
 import yaml
 import numpy as np
-
-try:
-    import tensorflow as tf
-except ImportError:
-    pass
+from tensorboard.backend.event_processing.event_accumulator import EventAccumulator
 
 # logging.getLogger('matplotlib.font_manager').disabled = True
 
 IMAGES_PATH = ".."
 
 
-def read_summary_values(file, tags, max_step=None, step_type="step"):
-    steps = [list() for tag in tags]
-    values = [list() for tag in tags]
-    begin = None
+def read_summary_values(
+    path: Path, tags: List[str], max_step: Optional[int] = None, step_type: str = "step"
+):
+    steps = {tag: list() for tag in tags}
+    values = {tag: list() for tag in tags}
+    begin = sys.maxsize
     end = 0
-    for summary in tf.train.summary_iterator(file):
-        if not begin:
-            begin = summary.wall_time
-        if max_step is not None and summary.step > max_step:
+
+    event_acc = EventAccumulator(str(path))
+    event_acc.Reload()
+    tags_available = event_acc.Tags()["scalars"]
+
+    for tag in tags_available:
+        if tag not in tags:
             continue
-        if summary.wall_time > end:
-            end = summary.wall_time
-        for value in summary.summary.value:
-            for i, tag in enumerate(tags):
-                if tag in value.tag:
-                    if step_type == "step":
-                        steps[i].append(summary.step)
-                    elif step_type == "time":
-                        minutes = (summary.wall_time - begin) / 60
-                        steps[i].append(minutes)
-                    values[i].append(value.simple_value)
+        event_list = event_acc.Scalars(tag)
+
+        if begin > event_list[0].wall_time:
+            begin = event_list[0].wall_time
+
+        if event_list[-1].wall_time > end:
+            end = event_list[-1].wall_time
+
+        values[tag].extend(list(map(lambda x: x.value, event_list)))
+        if step_type == "step":
+            steps[tag].extend(list(map(lambda x: x.step, event_list)))
+        elif step_type == "time":
+            steps[tag].extend(list(map(lambda x: x.wall_time, event_list)))
+
     delta = end - begin
-    return {tag: (step, val) for tag, step, val in zip(tags, steps, values)}, delta
+
+    # for summary in tf.train.summary_iterator(file):
+    #     if not begin:
+    #         begin = summary.wall_time
+    #     if max_step is not None and summary.step > max_step:
+    #         continue
+    #     if summary.wall_time > end:
+    #         end = summary.wall_time
+    #     for value in summary.summary.value:
+    #         for i, tag in enumerate(tags):
+    #             if tag in value.tag:
+    #                 if step_type == "step":
+    #                     steps[i].append(summary.step)
+    #                 elif step_type == "time":
+    #                     minutes = (summary.wall_time - begin) / 60
+    #                     steps[i].append(minutes)
+    #                 values[i].append(value.simple_value)
+    # delta = end - begin
+    return {tag: (steps[tag], values[tag]) for tag in tags}, delta
 
 
 def interpolate(
@@ -105,9 +128,7 @@ class TensorboardLogReader(LogReader):
                 logging.info(
                     f"Reading tensorboard logs from {log_file}. This may take a while..."
                 )
-                data, delta = read_summary_values(
-                    str(log_file), tags, max_step, step_type
-                )
+                data, delta = read_summary_values(log_file, tags, max_step, step_type)
                 deltas.append(delta)
                 for tag in data:
                     if tag not in tag_values:
@@ -139,7 +160,7 @@ class EvaluationLogReader(LogReader):
             tag_values = {}
             for log_file in self.logs[dir]:
                 file = log_file.open("r")
-                values = yaml.load(file)
+                values = yaml.safe_load(file)
                 file.close()
 
                 for tag in tags:

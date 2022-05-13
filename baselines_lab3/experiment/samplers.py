@@ -48,7 +48,7 @@ class Sampler(ABC):
         self,
         namespace: str,
         parent: str,
-        search_config: collections.MutableMapping,
+        search_config: collections.abc.MutableMapping,
         separator: str = ".",
     ):
         for key, v in search_config.items():

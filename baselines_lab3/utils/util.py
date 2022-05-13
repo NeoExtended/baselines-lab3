@@ -8,7 +8,7 @@ from pathlib import Path
 from subprocess import Popen, PIPE
 import logging
 from typing import Type, Any, Optional, Dict, List, Union
-from collections import abc, MutableMapping
+from collections import abc
 
 import numpy as np
 
@@ -35,7 +35,7 @@ def delete_keys_from_dict(dictionary, keys):
     modified_dict = {}
     for key, value in dictionary.items():
         if key not in keys_set:
-            if isinstance(value, MutableMapping):
+            if isinstance(value, abc.MutableMapping):
                 modified_dict[key] = delete_keys_from_dict(value, keys_set)
             else:
                 modified_dict[
@@ -152,9 +152,7 @@ def update_dict(d, u):
     return d
 
 
-def flatten_dict(
-    d: collections.MutableMapping, separator: str = ".", parent: str = ""
-) -> Dict:
+def flatten_dict(d: abc.MutableMapping, separator: str = ".", parent: str = "") -> Dict:
     items = []
 
     for k, v in d.items():
@@ -168,7 +166,7 @@ def flatten_dict(
     return dict(items)
 
 
-def unflatten_dict(d: collections.MutableMapping, separator: str = "."):
+def unflatten_dict(d: abc.MutableMapping, separator: str = "."):
     result = {}
 
     for k, v in d.items():

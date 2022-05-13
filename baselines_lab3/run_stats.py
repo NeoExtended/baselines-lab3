@@ -83,7 +83,7 @@ def make_figure(config, directories):
         x_label = "Time (in minutes)"
 
     if source == "tensorboard":
-        tags = config.get("tags", ["episode_length/ep_length_mean"])
+        tags = config.get("tags", ["eval/mean_ep_length"])
         names = config.get("names", ["Episode Length"])
         if len(tags) != len(names):
             raise ValueError("There must be a name for each tag and vice versa!")
@@ -131,7 +131,7 @@ def main(args=None):
 
     for task in tasks:
         file = task.open("r")
-        config = yaml.load(file)
+        config = yaml.safe_load(file)
         file.close()
 
         directories = []
