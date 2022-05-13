@@ -74,15 +74,17 @@ class Plotter:
         if alias is not None:
             alias_map = self._map_alias(alias, reader)
         else:
-            alias_map = {d: d.parent.name for d in reader.logs}
+            alias_map = {
+                group: dirs[0].parent.name for group, dirs in reader.logs.items()
+            }
 
         for tag, name, label in zip(tags, names, y_labels):
             self.prepare_plot(x_label, label, name)
 
-            for i, log_dir in enumerate(reader.logs):
-                step_data, value_data = values[log_dir][tag]
+            for i, group in enumerate(reader.logs):
+                step_data, value_data = values[group][tag]
                 step_data, value_data = np.asarray(step_data), np.asarray(value_data)
-                legend_label = alias_map[log_dir]
+                legend_label = alias_map[group]
                 if len(step_data[0]) == 0:
                     continue
                 if trial is not None:
@@ -120,9 +122,9 @@ class Plotter:
     def _map_alias(self, alias, reader):
         alias_map = {}
         for al in alias:
-            for log_dir in reader.logs:
-                if al in log_dir:
-                    alias_map[log_dir] = al
+            for group, log_dir in reader.logs.items():
+                if al in group:
+                    alias_map[group] = al
                     break
         return alias_map
 
