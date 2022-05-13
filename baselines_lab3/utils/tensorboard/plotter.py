@@ -71,15 +71,18 @@ class Plotter:
 
         logging.info("Saving plots to {}.".format(self.path))
 
+        if alias is not None:
+            alias_map = self._map_alias(alias, reader)
+        else:
+            alias_map = {d: d.parent.name for d in reader.logs}
+
         for tag, name, label in zip(tags, names, y_labels):
             self.prepare_plot(x_label, label, name)
 
             for i, log_dir in enumerate(reader.logs):
                 step_data, value_data = values[log_dir][tag]
                 step_data, value_data = np.asarray(step_data), np.asarray(value_data)
-                legend_label = None
-                if alias:
-                    legend_label = alias[os.path.basename(log_dir)]
+                legend_label = alias_map[log_dir]
                 if len(step_data[0]) == 0:
                     continue
                 if trial is not None:
@@ -113,6 +116,15 @@ class Plotter:
                         )
                     )
                 )
+
+    def _map_alias(self, alias, reader):
+        alias_map = {}
+        for al in alias:
+            for log_dir in reader.logs:
+                if al in log_dir:
+                    alias_map[log_dir] = al
+                    break
+        return alias_map
 
     def add_plot(
         self,

@@ -142,12 +142,20 @@ def main(args=None):
             else:  # Directory contains multiple run dirs.
                 directories.extend([f.path for f in os.scandir(dir) if f.is_dir()])
 
+        groups = config.get("groups", None)
+
+        dir_groups = {d: d for d in directories}
+        if groups is not None:
+            for group, dirs in groups.items():
+                for dir in dirs:
+                    dir_groups[dir] = group
+
         for job in config["jobs"]:
             type = job["type"]
             if type == "figure":
-                make_figure(job, directories)
+                make_figure(job, dir_groups)
             elif type == "table":
-                make_table(job, directories)
+                make_table(job, dir_groups)
 
 
 if __name__ == "__main__":

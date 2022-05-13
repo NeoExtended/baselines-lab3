@@ -1,6 +1,7 @@
 import logging
 import sys
 from abc import ABC, abstractmethod
+from collections.abc import Set
 from pathlib import Path
 from typing import Tuple, List, Optional, Dict, Any
 
@@ -81,10 +82,11 @@ def interpolate(
 
 
 class LogReader(ABC):
-    def __init__(self, log_dirs: List[str], log_name):
-        self.logs = {}
-        for file in log_dirs:
-            self.logs[file] = list(Path(file).glob(log_name))
+    def __init__(self, log_dirs: Dict[str, str], log_name):
+        groups = set(log_dirs.values())
+        self.logs = {group: [] for group in groups}
+        for file, group in log_dirs.items():
+            self.logs[group].extend(list(Path(file).glob(log_name)))
 
         self.values = None
 
@@ -111,7 +113,7 @@ class TensorboardLogReader(LogReader):
     :param max_step: (int) Last step that is read from the log.
     """
 
-    def __init__(self, log_dirs: List[str]) -> None:
+    def __init__(self, log_dirs: Dict[str, str]) -> None:
         super(TensorboardLogReader, self).__init__(log_dirs, "**/events.out.tfevents.*")
 
         self.deltas = None
@@ -121,10 +123,10 @@ class TensorboardLogReader(LogReader):
     ) -> Dict[str, Dict[str, Tuple[List[int], List[Any]]]]:
         self.values = {}
         self.deltas = {}
-        for dir in self.logs:
+        for dir, log_files in self.logs.items():
             tag_values = {}
             deltas = []
-            for log_file in self.logs[dir]:
+            for log_file in log_files:
                 logging.info(
                     f"Reading tensorboard logs from {log_file}. This may take a while..."
                 )
@@ -146,7 +148,8 @@ class EvaluationLogReader(LogReader):
     Class for evaluation log reading
     """
 
-    def __init__(self, log_dirs: List[str]) -> None:
+    def __init__(self, log_dirs: Dict[str, str]) -> None:
+        # TODO: Updade class for the new log dirs format
         super(EvaluationLogReader, self).__init__(
             log_dirs, "**/*.episode_information.yml"
         )
