@@ -62,14 +62,15 @@ def make_env(
         if log_dir and evaluation:
             env = ParticleInformationWrapper(env, path=os.path.join(log_dir, str(rank)))
 
-        if wrappers:
-            for wrapper, args in wrappers:
-                env = wrapper(env=env, **args)
-
         if monitor:
             env = Monitor(
                 env, filename=None, allow_early_resets=True
             )  # filename=os.path.join(log_dir, str(rank))
+
+        if wrappers:
+            for wrapper, args in wrappers:
+                env = wrapper(env=env, **args)
+
         return env
 
     return _init
