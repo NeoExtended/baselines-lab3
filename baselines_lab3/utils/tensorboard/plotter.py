@@ -71,12 +71,7 @@ class Plotter:
 
         logging.info("Saving plots to {}.".format(self.path))
 
-        if alias is not None:
-            alias_map = self._map_alias(alias, reader)
-        else:
-            alias_map = {
-                group: dirs[0].parent.name for group, dirs in reader.logs.items()
-            }
+        alias_map = self._map_alias(alias, reader)
 
         for tag, name, label in zip(tags, names, y_labels):
             self.prepare_plot(x_label, label, name)
@@ -120,12 +115,14 @@ class Plotter:
                 )
 
     def _map_alias(self, alias, reader):
-        alias_map = {}
-        for al in alias:
-            for group, log_dir in reader.logs.items():
-                if al in group:
-                    alias_map[group] = al
-                    break
+        alias_map = {
+            group: dirs[0].parent.parent.parent.name
+            for group, dirs in reader.logs.items()
+        }
+        if alias is not None:
+            for group, dirs in reader.logs.items():
+                if group in alias:
+                    alias_map[group] = alias[group]
         return alias_map
 
     def add_plot(
