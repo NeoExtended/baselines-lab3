@@ -64,8 +64,9 @@ class Scheduler:
         logging.info("Finished execution of config {}".format(config))
 
     def _schedule_distributed(self, config: Dict, log_dir: Path):
-        if config["meta"].get("slurm", False):
-            slurminade.update_default_configuration(**config["meta"].get("slurm"))
+        slurm_conf = {"output": str(log_dir / "slurm-%j.out")}
+        slurm_conf.update(config["meta"].get("slurm", {}))
+        slurminade.update_default_configuration(slurm_conf)
 
         run_slurm_session.distribute(str(log_dir))
         logging.info("Scheduled configuration {}".format(config))
