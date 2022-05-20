@@ -44,24 +44,6 @@ def read_summary_values(
             steps[tag].extend(list(map(lambda x: x.wall_time, event_list)))
 
     delta = end - begin
-
-    # for summary in tf.train.summary_iterator(file):
-    #     if not begin:
-    #         begin = summary.wall_time
-    #     if max_step is not None and summary.step > max_step:
-    #         continue
-    #     if summary.wall_time > end:
-    #         end = summary.wall_time
-    #     for value in summary.summary.value:
-    #         for i, tag in enumerate(tags):
-    #             if tag in value.tag:
-    #                 if step_type == "step":
-    #                     steps[i].append(summary.step)
-    #                 elif step_type == "time":
-    #                     minutes = (summary.wall_time - begin) / 60
-    #                     steps[i].append(minutes)
-    #                 values[i].append(value.simple_value)
-    # delta = end - begin
     return {tag: (steps[tag], values[tag]) for tag in tags}, delta
 
 

@@ -78,6 +78,9 @@ class Plotter:
 
             for i, group in enumerate(reader.logs):
                 step_data, value_data = values[group][tag]
+                min_length = min(step_data, key=lambda x: len(x))
+                step_data = [l[: len(min_length)] for l in step_data]
+                value_data = [l[: len(min_length)] for l in value_data]
                 step_data, value_data = np.asarray(step_data), np.asarray(value_data)
                 legend_label = alias_map[group]
                 if len(step_data[0]) == 0:
@@ -104,6 +107,7 @@ class Plotter:
                 )
 
             if self.has_data:
+                plt.ylim(bottom=0)
                 if alias:
                     plt.legend()
                 self.save_fig(
@@ -114,15 +118,18 @@ class Plotter:
                     )
                 )
 
-    def _map_alias(self, alias, reader):
-        alias_map = {
-            group: dirs[0].parent.parent.parent.name
-            for group, dirs in reader.logs.items()
-        }
+    def _map_alias(self, alias: Dict[str, str], reader: LogReader):
+        alias_map = {}
         if alias is not None:
             for group, dirs in reader.logs.items():
                 if group in alias:
                     alias_map[group] = alias[group]
+        else:
+            alias_map = {
+                group: dirs[0].parent.parent.parent.name
+                for group, dirs in reader.logs.items()
+            }
+
         return alias_map
 
     def add_plot(
@@ -192,7 +199,7 @@ class Plotter:
         self.close_plot()
         self.has_data = False
         plt.figure(figsize=(8, 4))
-        plt.xlim(left=0)
+
         if name:
             plt.title(name)
         plt.grid()
