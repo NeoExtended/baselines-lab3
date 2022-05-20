@@ -192,6 +192,7 @@ class Plotter:
         self.close_plot()
         self.has_data = False
         plt.figure(figsize=(8, 4))
+        plt.xlim(left=0)
         if name:
             plt.title(name)
         plt.grid()
