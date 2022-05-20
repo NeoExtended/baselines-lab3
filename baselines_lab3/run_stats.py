@@ -84,9 +84,13 @@ def make_figure(config, directories):
 
     if source == "tensorboard":
         tags = config.get("tags", ["eval/mean_ep_length"])
-        names = config.get("names", ["Episode Length"])
-        if len(tags) != len(names):
-            raise ValueError("There must be a name for each tag and vice versa!")
+        ylabels = config.get("ylabels", ["Episode Length"])
+        if len(tags) != len(ylabels):
+            raise ValueError("There must be a y-label for each tag and vice versa!")
+
+        titles = config.get("titles", ["Episode Length"])
+        if len(tags) != len(ylabels):
+            raise ValueError("There must be a titel for each tag and vice versa!")
 
         reader = TensorboardLogReader(directories)
 
@@ -103,7 +107,7 @@ def make_figure(config, directories):
     plot.from_reader(
         reader,
         tags=tags,
-        names=names,
+        names=titles,
         plot_avg_only=plot_avg_only,
         smoothing=smoothing,
         alias=alias,
@@ -111,6 +115,7 @@ def make_figure(config, directories):
         trial=trial,
         step_type=step_type,
         x_label=x_label,
+        y_labels=ylabels,
     )
 
 
