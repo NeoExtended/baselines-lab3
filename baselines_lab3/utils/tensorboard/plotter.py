@@ -1,5 +1,4 @@
 import logging
-import os
 from pathlib import Path
 from typing import List, Optional, Dict, Tuple, Union
 
@@ -9,10 +8,12 @@ import numpy as np
 
 # logging.getLogger('matplotlib.font_manager').disabled = True
 from baselines_lab3.utils.tensorboard.log_reader import (
-    TensorboardLogReader,
     interpolate,
     LogReader,
 )
+
+plt.rcParams["pdf.fonttype"] = 42
+plt.rcParams["ps.fonttype"] = 42
 
 
 class Plotter:
@@ -77,11 +78,7 @@ class Plotter:
             self.prepare_plot(x_label, label, name)
 
             for i, group in enumerate(reader.logs):
-                step_data, value_data = values[group][tag]
-                min_length = min(step_data, key=lambda x: len(x))
-                step_data = [l[: len(min_length)] for l in step_data]
-                value_data = [l[: len(min_length)] for l in value_data]
-                step_data, value_data = np.asarray(step_data), np.asarray(value_data)
+                step_data, value_data = self.prepare_data(group, tag, values)
                 legend_label = alias_map[group]
                 if len(step_data[0]) == 0:
                     continue
@@ -117,6 +114,19 @@ class Plotter:
                         )
                     )
                 )
+
+    def prepare_data(
+        self,
+        group: str,
+        tag: str,
+        values: Dict[str, Dict[str, Tuple[List[int], List[int]]]],
+    ) -> Tuple[np.ndarray, np.ndarray]:
+        step_data, value_data = values[group][tag]
+        min_length = min(step_data, key=lambda x: len(x))
+        step_data = [l[: len(min_length)] for l in step_data]
+        value_data = [l[: len(min_length)] for l in value_data]
+        step_data, value_data = np.asarray(step_data), np.asarray(value_data)
+        return step_data, value_data
 
     def _map_alias(self, alias: Dict[str, str], reader: LogReader):
         alias_map = {}
