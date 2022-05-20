@@ -78,9 +78,9 @@ def make_figure(config, directories):
     step_type = config.get("step_type", "step")
 
     if step_type == "step":
-        x_label = "Steps"
+        x_label = "Training Steps"
     else:
-        x_label = "Time (in minutes)"
+        x_label = "Training Time (in minutes)"
 
     if source == "tensorboard":
         tags = config.get("tags", ["eval/mean_ep_length"])
@@ -89,7 +89,7 @@ def make_figure(config, directories):
             raise ValueError("There must be a y-label for each tag and vice versa!")
 
         titles = config.get("titles", ["Episode Length"])
-        if len(tags) != len(ylabels):
+        if len(tags) != len(titles):
             raise ValueError("There must be a titel for each tag and vice versa!")
 
         reader = TensorboardLogReader(directories)
