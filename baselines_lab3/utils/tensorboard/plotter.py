@@ -208,7 +208,7 @@ class Plotter:
     def prepare_plot(self, xlabel=None, ylabel=None, name=None):
         self.close_plot()
         self.has_data = False
-        plt.figure(figsize=(8, 4))
+        plt.figure(figsize=(6.4, 3.2))
 
         if name:
             plt.title(name)
