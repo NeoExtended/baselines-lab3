@@ -73,11 +73,12 @@ class Plotter:
         logging.info("Saving plots to {}.".format(self.path))
 
         alias_map = self._map_alias(alias, reader)
+        groups = self.get_ordered_groups(alias, reader)
 
         for tag, name, label in zip(tags, names, y_labels):
             self.prepare_plot(x_label, label, name)
 
-            for i, group in enumerate(reader.logs):
+            for i, group in enumerate(groups):
                 step_data, value_data = self.prepare_data(group, tag, values)
                 legend_label = alias_map[group]
                 if len(step_data[0]) == 0:
@@ -115,6 +116,13 @@ class Plotter:
                     )
                 )
 
+    def get_ordered_groups(self, alias: Dict[str, str], reader: LogReader):
+        groups = list(alias.keys())
+        for group in reader.logs.keys():
+            if group not in groups:
+                groups.append(group)
+        return groups
+
     def prepare_data(
         self,
         group: str,
@@ -129,16 +137,14 @@ class Plotter:
         return step_data, value_data
 
     def _map_alias(self, alias: Dict[str, str], reader: LogReader):
-        alias_map = {}
+        alias_map = {
+            group: dirs[0].parent.parent.parent.name
+            for group, dirs in reader.logs.items()
+        }
         if alias is not None:
             for group, dirs in reader.logs.items():
                 if group in alias:
                     alias_map[group] = alias[group]
-        else:
-            alias_map = {
-                group: dirs[0].parent.parent.parent.name
-                for group, dirs in reader.logs.items()
-            }
 
         return alias_map
 
