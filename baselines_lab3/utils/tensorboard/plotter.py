@@ -7,6 +7,7 @@ import matplotlib.ticker as ticker
 import numpy as np
 
 # logging.getLogger('matplotlib.font_manager').disabled = True
+from baselines_lab3.utils import util
 from baselines_lab3.utils.tensorboard.log_reader import (
     interpolate,
     LogReader,
@@ -25,7 +26,7 @@ class Plotter:
     """
 
     def __init__(self, output_path: str, file_format: str = "pdf") -> None:
-        self.path = Path(output_path).joinpath("figures")
+        self.path = util.create_log_directory(output_path)
         self.file_format = file_format
         self.cmap = plt.get_cmap("tab10")
         self.has_data = False
@@ -62,7 +63,6 @@ class Plotter:
             assert len(alias) == len(
                 reader.logs
             ), "There must be an alias for every log directory!"
-        self.path.mkdir(exist_ok=True)
 
         if len(reader.logs) > 10:
             self.cmap = plt.cm.get_cmap("hsv", len(reader.logs) + 5)
