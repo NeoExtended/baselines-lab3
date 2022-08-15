@@ -136,7 +136,7 @@ def flatten_dict(d: abc.MutableMapping, separator: str = ".", parent: str = "") 
     for k, v in d.items():
         new_key = parent + separator + k if parent else k
 
-        if isinstance(v, collections.MutableMapping):
+        if isinstance(v, abc.MutableMapping):
             items.extend(flatten_dict(v, separator, new_key).items())
         else:
             items.append((new_key, v))
