@@ -1,0 +1,74 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "baselines-lab3"
+dynamic = ["version"]
+#version = "0.0.1"
+authors = [
+    { name="Matthias Konitzny", email="matthias.konitzny@kabelmail.de" },
+]
+description = "A zero-code configuration file based experimentation environment for Reinfocement Learning."
+readme = "README.md"
+requires-python = ">=3.9"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+
+dependencies = [
+    "gym",
+    "numpy",
+    "stable-baselines3>=1.6.0",
+    "optuna",
+    "imageio",
+    "torch>=1.8.1",
+    "pyyaml",
+    "matplotlib",
+    "slurminade",
+    "opencv-python",
+    "tensorboard"
+]
+
+[project.urls]
+"Homepage" = "https://github.com/NeoExtended/baselines-lab3"
+"Bug Tracker" = "https://github.com/NeoExtended/baselines-lab3/issues"
+
+[project.scripts]
+bl3-run = "baselines_lab3.run_lab:main"
+bl3-stats = "baselines_lab3.run_stats:main"
+
+[tool.hatch.version]
+path = "baselines_lab3/__about__.py"
+
+[tool.hatch.envs.default]
+dependencies = [
+    "coverage[toml]",
+    "pytest",
+    "pytest-cov",
+    "black",
+    "isort",
+    "flake8",
+]
+
+[tool.hatch.envs.default.scripts]
+black-check = "black --check ./baselines_lab3 {args}"
+isort-check = "isort --check ./baselines_lab3 --profile=black {args}"
+flake8-check = "flake8 ./baselines_lab3 --count --select=E9,F63,F7,F82 --show-source --statistics {args}"
+flake8-warn = "flake8 ./baselines_lab3 --max-line-length=110 --count --exit-zero --statistics {args}"
+
+[[tool.hatch.envs.test.matrix]]
+python = ["39", "310", "311"]
+
+
+[tool.coverage.report]
+exclude_lines = [
+  "no cov",
+  "if __name__ == .__main__.:",
+  "if TYPE_CHECKING:",
+]
+
+[tool.hatch.build]
+only-packages = true
